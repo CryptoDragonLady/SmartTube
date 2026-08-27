@@ -36,6 +36,7 @@ import com.liskovsoft.sharedutils.querystringparser.UrlQueryStringFactory;
 import com.liskovsoft.smartyoutubetv2.common.R;
 import com.liskovsoft.smartyoutubetv2.common.autoframerate.internal.DisplayHolder.Mode;
 import com.liskovsoft.smartyoutubetv2.common.autoframerate.internal.UhdHelper;
+import com.liskovsoft.smartyoutubetv2.common.exoplayer.NetworkEngineResolver;
 import com.liskovsoft.smartyoutubetv2.common.exoplayer.versions.ExoUtils;
 import com.liskovsoft.smartyoutubetv2.common.misc.MediaServiceManager;
 import com.liskovsoft.smartyoutubetv2.common.prefs.AppPrefs;
@@ -371,9 +372,13 @@ public final class DebugInfoManager implements Runnable, Player.EventListener {
     private void appendVersion() {
         //appendRow("ExoPlayer version", ExoPlayerLibraryInfo.VERSION);
         PlayerTweaksData playerTweaksData = PlayerTweaksData.instance(mContext);
-        String engine = playerTweaksData.getPlayerDataSource() == PlayerTweaksData.PLAYER_DATA_SOURCE_OKHTTP ? "OkHttp" :
-                playerTweaksData.getPlayerDataSource() == PlayerTweaksData.PLAYER_DATA_SOURCE_CRONET
-                        && CronetManager.getEngine(mContext) != null ? "Cronet" : "Default";
+        int source = playerTweaksData.getPlayerDataSource();
+        int dnsType = playerTweaksData.getPreferredDnsType();
+        boolean cronetAvailable = source != PlayerTweaksData.PLAYER_DATA_SOURCE_CRONET ||
+                dnsType != PlayerTweaksData.DNS_TYPE_SYSTEM || CronetManager.getEngine(mContext) != null;
+        int effectiveSource = NetworkEngineResolver.resolve(source, dnsType, cronetAvailable);
+        String engine = effectiveSource == PlayerTweaksData.PLAYER_DATA_SOURCE_OKHTTP ? "OkHttp" :
+                effectiveSource == PlayerTweaksData.PLAYER_DATA_SOURCE_CRONET ? "Cronet" : "Default";
         String protocol;
         Object manifest = mPlayer.getCurrentManifest();
         if (manifest == null) {

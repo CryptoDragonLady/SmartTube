@@ -51,6 +51,7 @@ public class PlayerTweaksData implements ProfileChangeListener {
     public static final int DNS_TYPE_SYSTEM = GlobalPreferences.DNS_TYPE_SYSTEM;
     public static final int DNS_TYPE_IPV4 = GlobalPreferences.DNS_TYPE_IPV4;
     public static final int DNS_TYPE_GOOGLE = GlobalPreferences.DNS_TYPE_GOOGLE;
+    public static final int DNS_TYPE_IPV4_ONLY = GlobalPreferences.DNS_TYPE_IPV4_ONLY;
     @SuppressLint("StaticFieldLeak")
     private static PlayerTweaksData sInstance;
     private final AppPrefs mPrefs;
