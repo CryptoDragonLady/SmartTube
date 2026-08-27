@@ -52,6 +52,7 @@ public class PlayerTweaksData implements ProfileChangeListener {
     public static final int DNS_TYPE_IPV4 = GlobalPreferences.DNS_TYPE_IPV4;
     public static final int DNS_TYPE_GOOGLE = GlobalPreferences.DNS_TYPE_GOOGLE;
     public static final int DNS_TYPE_IPV4_ONLY = GlobalPreferences.DNS_TYPE_IPV4_ONLY;
+    public static final int DNS_TYPE_IPV6_ONLY = GlobalPreferences.DNS_TYPE_IPV6_ONLY;
     @SuppressLint("StaticFieldLeak")
     private static PlayerTweaksData sInstance;
     private final AppPrefs mPrefs;
@@ -111,6 +112,7 @@ public class PlayerTweaksData implements ProfileChangeListener {
     private boolean mIsDontResizeVideoToFitDialogEnabled;
     private boolean mIsSuggestionsHorizontallyScrolled;
     private boolean mIsQueueRespectsPlaybackMode;
+    private boolean mIsSabrStreamsForced;
     private final Runnable mPersistDataInt = this::persistDataInt;
 
     private PlayerTweaksData(Context context) {
@@ -234,6 +236,15 @@ public class PlayerTweaksData implements ProfileChangeListener {
     public void setHlsStreamsForced(boolean enable) {
         mIsHlsStreamsForced = enable;
         mIsDashUrlStreamsForced = false;
+        persistData();
+    }
+
+    public boolean isSabrStreamsForced() {
+        return mIsSabrStreamsForced;
+    }
+
+    public void setSabrStreamsForced(boolean enable) {
+        mIsSabrStreamsForced = enable;
         persistData();
     }
 
@@ -765,6 +776,7 @@ public class PlayerTweaksData implements ProfileChangeListener {
         mIsQuickSkipVideosAltEnabled = Helpers.parseBoolean(split, 58, false);
         mIsAudioTimeStretchingEnabled = Helpers.parseBoolean(split, 59, true);
         mIsQueueRespectsPlaybackMode = Helpers.parseBoolean(split, 60, false);
+        mIsSabrStreamsForced = Helpers.parseBoolean(split, 61, false);
 
         updateDefaultValues();
     }
@@ -792,7 +804,8 @@ public class PlayerTweaksData implements ProfileChangeListener {
                 mIsUnsafeAudioFormatsEnabled, null, mIsLoopShortsEnabled, mIsQuickSkipShortsEnabled, mIsRememberPositionOfLiveVideosEnabled,
                 mIsOculusQuestFixEnabled, null, mIsExtraLongSpeedListEnabled, mIsQuickSkipVideosEnabled, mIsNetworkErrorFixingDisabled, mIsCommentsPlacedLeft,
                 null, mIsAudioFocusEnabled, mIsDontResizeVideoToFitDialogEnabled, mIsSuggestionsHorizontallyScrolled,
-                mIsQuickSkipShortsAltEnabled, mIsQuickSkipVideosAltEnabled, mIsAudioTimeStretchingEnabled, mIsQueueRespectsPlaybackMode
+                mIsQuickSkipShortsAltEnabled, mIsQuickSkipVideosAltEnabled, mIsAudioTimeStretchingEnabled, mIsQueueRespectsPlaybackMode,
+                mIsSabrStreamsForced
                 ));
     }
 

@@ -94,4 +94,26 @@ public class NetworkEngineResolverTest {
                         PlayerTweaksData.DNS_TYPE_GOOGLE,
                         true));
     }
+
+    @Test
+    public void ipv6OnlyUsesDnsAwareEngineForEveryConfiguredEngine() {
+        assertEquals(
+                PlayerTweaksData.PLAYER_DATA_SOURCE_OKHTTP,
+                NetworkEngineResolver.resolve(
+                        PlayerTweaksData.PLAYER_DATA_SOURCE_DEFAULT,
+                        PlayerTweaksData.DNS_TYPE_IPV6_ONLY,
+                        true));
+        assertEquals(
+                PlayerTweaksData.PLAYER_DATA_SOURCE_OKHTTP,
+                NetworkEngineResolver.resolve(
+                        PlayerTweaksData.PLAYER_DATA_SOURCE_CRONET,
+                        PlayerTweaksData.DNS_TYPE_IPV6_ONLY,
+                        true));
+        assertEquals(
+                PlayerTweaksData.PLAYER_DATA_SOURCE_OKHTTP,
+                NetworkEngineResolver.resolve(
+                        PlayerTweaksData.PLAYER_DATA_SOURCE_OKHTTP,
+                        PlayerTweaksData.DNS_TYPE_IPV6_ONLY,
+                        true));
+    }
 }
