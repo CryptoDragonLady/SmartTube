@@ -510,29 +510,47 @@ public class PlayerSettingsPresenter extends BasePresenter<Void> {
                 },
                 mPlayerTweaksData.isOculusQuestFixEnabled()));
 
-        options.add(UiOptionItem.from(getContext().getString(R.string.prefer_ipv4),
+        OptionItem preferIpv4Option = UiOptionItem.from(getContext().getString(R.string.prefer_ipv4),
                 getContext().getString(R.string.prefer_ipv4_desc),
                 option -> {
                     mPlayerTweaksData.setPreferredDnsType(option.isSelected() ? PlayerTweaksData.DNS_TYPE_IPV4 : PlayerTweaksData.DNS_TYPE_SYSTEM);
                     mRestartApp = true;
                 },
-                mPlayerTweaksData.getPreferredDnsType() == PlayerTweaksData.DNS_TYPE_IPV4));
+                mPlayerTweaksData.getPreferredDnsType() == PlayerTweaksData.DNS_TYPE_IPV4);
 
-        options.add(UiOptionItem.from(getContext().getString(R.string.ipv4_only),
+        OptionItem ipv4OnlyOption = UiOptionItem.from(getContext().getString(R.string.ipv4_only),
                 getContext().getString(R.string.ipv4_only_desc),
                 option -> {
                     mPlayerTweaksData.setPreferredDnsType(option.isSelected() ? PlayerTweaksData.DNS_TYPE_IPV4_ONLY : PlayerTweaksData.DNS_TYPE_SYSTEM);
                     mRestartApp = true;
                 },
-                mPlayerTweaksData.getPreferredDnsType() == PlayerTweaksData.DNS_TYPE_IPV4_ONLY));
+                mPlayerTweaksData.getPreferredDnsType() == PlayerTweaksData.DNS_TYPE_IPV4_ONLY);
 
-        options.add(UiOptionItem.from(getContext().getString(R.string.prefer_google_dns),
+        OptionItem ipv6OnlyOption = UiOptionItem.from(getContext().getString(R.string.ipv6_only),
+                getContext().getString(R.string.ipv6_only_desc),
+                option -> {
+                    mPlayerTweaksData.setPreferredDnsType(option.isSelected() ? PlayerTweaksData.DNS_TYPE_IPV6_ONLY : PlayerTweaksData.DNS_TYPE_SYSTEM);
+                    mRestartApp = true;
+                },
+                mPlayerTweaksData.getPreferredDnsType() == PlayerTweaksData.DNS_TYPE_IPV6_ONLY);
+
+        OptionItem googleDnsOption = UiOptionItem.from(getContext().getString(R.string.prefer_google_dns),
                 getContext().getString(R.string.prefer_ipv4_desc),
                 option -> {
                     mPlayerTweaksData.setPreferredDnsType(option.isSelected() ? PlayerTweaksData.DNS_TYPE_GOOGLE : PlayerTweaksData.DNS_TYPE_SYSTEM);
                     mRestartApp = true;
                 },
-                mPlayerTweaksData.getPreferredDnsType() == PlayerTweaksData.DNS_TYPE_GOOGLE));
+                mPlayerTweaksData.getPreferredDnsType() == PlayerTweaksData.DNS_TYPE_GOOGLE);
+
+        preferIpv4Option.setRadio(ipv4OnlyOption, ipv6OnlyOption, googleDnsOption);
+        ipv4OnlyOption.setRadio(preferIpv4Option, ipv6OnlyOption, googleDnsOption);
+        ipv6OnlyOption.setRadio(preferIpv4Option, ipv4OnlyOption, googleDnsOption);
+        googleDnsOption.setRadio(preferIpv4Option, ipv4OnlyOption, ipv6OnlyOption);
+
+        options.add(preferIpv4Option);
+        options.add(ipv4OnlyOption);
+        options.add(ipv6OnlyOption);
+        options.add(googleDnsOption);
 
         options.add(UiOptionItem.from(getContext().getString(R.string.audio_sync_fix),
                 getContext().getString(R.string.audio_sync_fix_desc),
@@ -562,6 +580,11 @@ public class PlayerSettingsPresenter extends BasePresenter<Void> {
                 getContext().getString(R.string.force_legacy_codecs_desc),
                 option -> mPlayerData.setLegacyCodecsForced(option.isSelected()),
                 mPlayerData.isLegacyCodecsForced()));
+
+        options.add(UiOptionItem.from(getContext().getString(R.string.force_sabr),
+                getContext().getString(R.string.force_sabr_desc),
+                option -> mPlayerTweaksData.setSabrStreamsForced(option.isSelected()),
+                mPlayerTweaksData.isSabrStreamsForced()));
 
         options.add(UiOptionItem.from(getContext().getString(R.string.live_stream_fix),
                 getContext().getString(R.string.live_stream_fix_desc),

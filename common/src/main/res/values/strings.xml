@@ -683,6 +683,10 @@
     <string name="prefer_ipv4_desc">Could fix situations when the app isn\'t working at all.\nNote. May cause hangs and crashes (especially on Android 8 devices or Dune HD)</string>
     <string name="ipv4_only">Use IPv4 addresses only</string>
     <string name="ipv4_only_desc">Use only IPv4 addresses, even when IPv6 is supported. IPv6-only services will be unavailable.</string>
+    <string name="ipv6_only">Use IPv6 addresses only</string>
+    <string name="ipv6_only_desc">Use only IPv6 addresses. IPv4-only services and IPv4-only networks will be unavailable.</string>
+    <string name="force_sabr">Force SABR</string>
+    <string name="force_sabr_desc">Prefer SABR over DASH for non-live videos when SABR data is available.</string>
     <string name="long_press_for_settings">LONG PRESS FOR SETTINGS</string>
     <string name="long_press_for_options">LONG PRESS FOR OPTIONS</string>
     <string name="device_specific_backup">Backup for this device only</string>

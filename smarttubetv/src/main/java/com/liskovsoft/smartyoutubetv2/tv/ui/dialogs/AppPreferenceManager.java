@@ -10,6 +10,7 @@ import androidx.preference.SwitchPreference;
 import com.liskovsoft.sharedutils.helpers.MessageHelpers;
 import com.liskovsoft.smartyoutubetv2.common.app.models.playback.ui.OptionCategory;
 import com.liskovsoft.smartyoutubetv2.common.app.models.playback.ui.OptionItem;
+import com.liskovsoft.smartyoutubetv2.common.app.models.playback.ui.RadioOptionHelper;
 import com.liskovsoft.smartyoutubetv2.common.utils.Utils;
 import com.liskovsoft.smartyoutubetv2.tv.R;
 import com.liskovsoft.smartyoutubetv2.tv.ui.dialogs.other.ChatPreference;
@@ -222,9 +223,7 @@ public class AppPreferenceManager {
                             OptionItem[] radioItems = item.getRadio();
 
                             if (radioItems != null) {
-                                for (OptionItem radioItem : radioItems) {
-                                    radioItem.onSelect(false);
-                                }
+                                RadioOptionHelper.deselect(values, radioItems);
 
                                 if (mOnChange != null) {
                                     mOnChange.run();

@@ -78,6 +78,7 @@ import com.liskovsoft.smartyoutubetv2.common.app.presenters.SplashPresenter;
 import com.liskovsoft.smartyoutubetv2.common.app.presenters.WebBrowserPresenter;
 import com.liskovsoft.smartyoutubetv2.common.app.views.PlaybackView;
 import com.liskovsoft.smartyoutubetv2.common.app.views.ViewManager;
+import com.liskovsoft.smartyoutubetv2.common.exoplayer.DnsFallbackPolicy;
 import com.liskovsoft.smartyoutubetv2.common.exoplayer.selector.FormatItem.VideoPreset;
 import com.liskovsoft.smartyoutubetv2.common.exoplayer.selector.TrackSelectorUtil;
 import com.liskovsoft.smartyoutubetv2.common.exoplayer.selector.track.MediaTrack;
@@ -1314,8 +1315,10 @@ public class Utils {
         if (error != null && Helpers.contains(error.getMessage(), "No address associated with hostname")) {
             // java.net.UnknownHostException: Unable to resolve host "www.youtube.com": No address associated with hostname
             PlayerTweaksData playerTweaksData = PlayerTweaksData.instance(context);
-            if (playerTweaksData.getPreferredDnsType() != PlayerTweaksData.DNS_TYPE_IPV4) {
-                playerTweaksData.setPreferredDnsType(PlayerTweaksData.DNS_TYPE_IPV4);
+            int currentDnsType = playerTweaksData.getPreferredDnsType();
+            int fallbackDnsType = DnsFallbackPolicy.resolveAfterUnknownHost(currentDnsType);
+            if (currentDnsType != fallbackDnsType) {
+                playerTweaksData.setPreferredDnsType(fallbackDnsType);
                 // Restart app to reinit OkHttp internal objects
                 Utils.restartTheApp(context);
                 return true;
