@@ -518,6 +518,14 @@ public class PlayerSettingsPresenter extends BasePresenter<Void> {
                 },
                 mPlayerTweaksData.getPreferredDnsType() == PlayerTweaksData.DNS_TYPE_IPV4));
 
+        options.add(UiOptionItem.from(getContext().getString(R.string.ipv4_only),
+                getContext().getString(R.string.ipv4_only_desc),
+                option -> {
+                    mPlayerTweaksData.setPreferredDnsType(option.isSelected() ? PlayerTweaksData.DNS_TYPE_IPV4_ONLY : PlayerTweaksData.DNS_TYPE_SYSTEM);
+                    mRestartApp = true;
+                },
+                mPlayerTweaksData.getPreferredDnsType() == PlayerTweaksData.DNS_TYPE_IPV4_ONLY));
+
         options.add(UiOptionItem.from(getContext().getString(R.string.prefer_google_dns),
                 getContext().getString(R.string.prefer_ipv4_desc),
                 option -> {

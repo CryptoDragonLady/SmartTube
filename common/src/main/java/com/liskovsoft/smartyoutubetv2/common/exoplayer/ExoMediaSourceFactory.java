@@ -125,9 +125,13 @@ public class ExoMediaSourceFactory {
     private HttpDataSource.Factory buildHttpDataSourceFactory(boolean useBandwidthMeter) {
         PlayerTweaksData tweaksData = PlayerTweaksData.instance(mContext);
         int source = tweaksData.getPlayerDataSource();
+        int dnsType = tweaksData.getPreferredDnsType();
+        boolean cronetAvailable = source != PlayerTweaksData.PLAYER_DATA_SOURCE_CRONET ||
+                dnsType != PlayerTweaksData.DNS_TYPE_SYSTEM || CronetManager.getEngine(mContext) != null;
+        int effectiveSource = NetworkEngineResolver.resolve(source, dnsType, cronetAvailable);
         DefaultBandwidthMeter bandwidthMeter = useBandwidthMeter ? BANDWIDTH_METER : null;
-        return source == PlayerTweaksData.PLAYER_DATA_SOURCE_OKHTTP ? buildOkHttpDataSourceFactory(bandwidthMeter) :
-                        source == PlayerTweaksData.PLAYER_DATA_SOURCE_CRONET && CronetManager.getEngine(mContext) != null ? buildCronetDataSourceFactory(bandwidthMeter) :
+        return effectiveSource == PlayerTweaksData.PLAYER_DATA_SOURCE_OKHTTP ? buildOkHttpDataSourceFactory(bandwidthMeter) :
+                        effectiveSource == PlayerTweaksData.PLAYER_DATA_SOURCE_CRONET ? buildCronetDataSourceFactory(bandwidthMeter) :
                                 buildDefaultHttpDataSourceFactory(bandwidthMeter);
     }
 
