@@ -36,6 +36,8 @@ import com.liskovsoft.smartyoutubetv2.common.utils.AppDialogUtil;
 import com.liskovsoft.youtubeapi.service.YouTubeServiceManager;
 import io.reactivex.Observable;
 import io.reactivex.disposables.Disposable;
+import io.reactivex.functions.Action;
+import io.reactivex.functions.Consumer;
 
 import java.lang.ref.WeakReference;
 import java.util.HashMap;
@@ -54,6 +56,7 @@ public class VideoMenuPresenter extends BaseMenuPresenter {
     private Video mVideo;
     public static WeakReference<Video> sVideoHolder = new WeakReference<>(null);
     private boolean mIsNotInterestedButtonEnabled;
+    private boolean mIsNotInterestedFeedbackEnabled;
     private boolean mIsNotRecommendChannelEnabled;
     private boolean mIsBlockChannelEnabled;
     private boolean mIsRemoveFromHistoryButtonEnabled;
@@ -351,6 +354,15 @@ public class VideoMenuPresenter extends BaseMenuPresenter {
 
         mDialogPresenter.appendSingleButton(
                 UiOptionItem.from(getContext().getString(R.string.not_interested), optionItem -> {
+                    if (!mIsNotInterestedFeedbackEnabled) {
+                        mNotInterestedAction = submitNotInterested(
+                                mMediaItemService,
+                                mVideo.mediaItem.getFeedbackToken(),
+                                error -> Log.e(TAG, "Mark as 'not interested' error: %s", error.getMessage()),
+                                this::removeSuggestedItemAndClose);
+                        return;
+                    }
+
                     mNotInterestedAction = mMediaItemService.getFeedbackReasonsObserve(mVideo.mediaItem.getFeedbackToken())
                             .subscribe(
                                     reasons -> {
@@ -373,6 +385,12 @@ public class VideoMenuPresenter extends BaseMenuPresenter {
                                     error -> Log.e(TAG, "Mark as 'not interested' error: %s", error.getMessage())
                             );
                 }));
+    }
+
+    static Disposable submitNotInterested(MediaItemService mediaItemService, String feedbackToken,
+                                           Consumer<? super Throwable> onError, Action onComplete) {
+        return mediaItemService.markAsNotInterestedObserve(feedbackToken)
+                .subscribe(ignored -> {}, onError, onComplete);
     }
 
     private void removeSuggestedItemAndClose() {
@@ -975,6 +993,7 @@ public class VideoMenuPresenter extends BaseMenuPresenter {
         mIsShareQRLinkButtonEnabled = mainUIData.isMenuItemEnabled(MainUIData.MENU_ITEM_SHARE_QR_LINK);
         mIsShareEmbedLinkButtonEnabled = mainUIData.isMenuItemEnabled(MainUIData.MENU_ITEM_SHARE_EMBED_LINK);
         mIsNotInterestedButtonEnabled = mainUIData.isMenuItemEnabled(MainUIData.MENU_ITEM_NOT_INTERESTED);
+        mIsNotInterestedFeedbackEnabled = mainUIData.isNotInterestedFeedbackEnabled();
         mIsNotRecommendChannelEnabled = mainUIData.isMenuItemEnabled(MainUIData.MENU_ITEM_NOT_RECOMMEND_CHANNEL);
         mIsBlockChannelEnabled = mainUIData.isMenuItemEnabled(MainUIData.MENU_ITEM_BLOCK_CHANNEL);
         mIsRemoveFromHistoryButtonEnabled = mainUIData.isMenuItemEnabled(MainUIData.MENU_ITEM_REMOVE_FROM_HISTORY);

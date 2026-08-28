@@ -205,6 +205,10 @@ public class GeneralSettingsPresenter extends BasePresenter<Void> {
             }, mMainUIData.isMenuItemEnabled(menuItem)));
         }
 
+        options.add(UiOptionItem.from(getContext().getString(R.string.show_not_interested_feedback_reasons),
+                optionItem -> mMainUIData.setNotInterestedFeedbackEnabled(optionItem.isSelected()),
+                mMainUIData.isNotInterestedFeedbackEnabled()));
+
         settingsPresenter.appendCheckedCategory(getContext().getString(R.string.context_menu), options);
     }
 

@@ -106,6 +106,7 @@
     <string name="open_channel">Open channel</string>
     <string name="open_playlist">Open playlist</string>
     <string name="not_interested">Not interested</string>
+    <string name="show_not_interested_feedback_reasons">Show Not Interested feedback reasons</string>
     <string name="not_recommend_channel">Don\'t recommend channel</string>
     <string name="you_wont_see_this_video">Video has been removed from recommended</string>
     <string name="you_wont_see_this_channel">You won\'t see this channel in recommendations</string>
