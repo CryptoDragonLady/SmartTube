@@ -149,6 +149,37 @@ public class ChannelUploadsPresenter extends BasePresenter<ChannelUploadsView> i
         }
     }
 
+    public void openChannelUploads(Video item) {
+        if (item == null) {
+            return;
+        }
+
+        if (TextUtils.isEmpty(item.channelId)) {
+            MediaServiceManager.instance().loadMetadata(item, metadata -> {
+                item.sync(metadata);
+
+                if (!TextUtils.isEmpty(item.channelId)) {
+                    openChannelUploadsInt(item);
+                }
+            });
+            return;
+        }
+
+        openChannelUploadsInt(item);
+    }
+
+    private void openChannelUploadsInt(Video item) {
+        clear();
+
+        mChannel = item;
+
+        getViewManager().startView(ChannelUploadsView.class);
+
+        if (getView() != null) {
+            update(getContentService().getGroupObserve(SimpleMediaItem.fromChannel(item)));
+        }
+    }
+
     public void obtainGroup(Video item, OnMediaGroup callback) {
         obtainGroup(item, callback, null, null);
     }

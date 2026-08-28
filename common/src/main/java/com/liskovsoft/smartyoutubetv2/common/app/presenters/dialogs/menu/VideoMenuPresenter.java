@@ -335,7 +335,7 @@ public class VideoMenuPresenter extends BaseMenuPresenter {
         }
 
         mDialogPresenter.appendSingleButton(
-                UiOptionItem.from(getContext().getString(R.string.open_channel_uploads), optionItem -> ChannelUploadsPresenter.instance(getContext()).openChannel(mVideo)));
+                UiOptionItem.from(getContext().getString(R.string.open_channel_uploads), optionItem -> ChannelUploadsPresenter.instance(getContext()).openChannelUploads(mVideo)));
     }
 
     private void appendNotInterestedButton() {
@@ -962,7 +962,7 @@ public class VideoMenuPresenter extends BaseMenuPresenter {
 
         MainUIData mainUIData = MainUIData.instance(getContext());
 
-        mIsOpenChannelUploadsButtonEnabled = true;
+        mIsOpenChannelUploadsButtonEnabled = mainUIData.isMenuItemEnabled(MainUIData.MENU_ITEM_OPEN_CHANNEL_UPLOADS);
         mIsOpenPlaylistButtonEnabled = true;
         mIsReturnToBackgroundVideoEnabled = true;
         mIsOpenChannelButtonEnabled = mainUIData.isMenuItemEnabled(MainUIData.MENU_ITEM_OPEN_CHANNEL);
@@ -1015,6 +1015,7 @@ public class VideoMenuPresenter extends BaseMenuPresenter {
         mMenuMapping.put(MainUIData.MENU_ITEM_PLAY_NEXT, new MenuAction(this::appendPlayNextButton, false));
         mMenuMapping.put(MainUIData.MENU_ITEM_SHOW_QUEUE, new MenuAction(this::appendShowPlaybackQueueButton, false));
         mMenuMapping.put(MainUIData.MENU_ITEM_OPEN_CHANNEL, new MenuAction(this::appendOpenChannelButton, false));
+        mMenuMapping.put(MainUIData.MENU_ITEM_OPEN_CHANNEL_UPLOADS, new MenuAction(this::appendOpenChannelUploadsButton, false));
         mMenuMapping.put(MainUIData.MENU_ITEM_OPEN_PLAYLIST, new MenuAction(this::appendOpenPlaylistButton, false));
         mMenuMapping.put(MainUIData.MENU_ITEM_SUBSCRIBE, new MenuAction(this::appendSubscribeButton, false));
         mMenuMapping.put(MainUIData.MENU_ITEM_EXCLUDE_FROM_CONTENT_BLOCK, new MenuAction(this::appendToggleExcludeFromContentBlockButton, false));

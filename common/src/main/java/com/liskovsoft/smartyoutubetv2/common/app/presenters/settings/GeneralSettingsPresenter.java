@@ -768,6 +768,7 @@ public class GeneralSettingsPresenter extends BasePresenter<Void> {
         menuNames.put(MainUIData.MENU_ITEM_EXCLUDE_FROM_CONTENT_BLOCK, R.string.content_block_exclude_channel);
         menuNames.put(MainUIData.MENU_ITEM_MARK_AS_WATCHED, R.string.mark_as_watched);
         menuNames.put(MainUIData.MENU_ITEM_OPEN_CHANNEL, R.string.open_channel);
+        menuNames.put(MainUIData.MENU_ITEM_OPEN_CHANNEL_UPLOADS, R.string.open_channel_uploads);
         menuNames.put(MainUIData.MENU_ITEM_UPDATE_CHECK, R.string.check_for_updates);
         menuNames.put(MainUIData.MENU_ITEM_CLEAR_HISTORY, R.string.clear_history);
         menuNames.put(MainUIData.MENU_ITEM_TOGGLE_HISTORY, R.string.pause_history);

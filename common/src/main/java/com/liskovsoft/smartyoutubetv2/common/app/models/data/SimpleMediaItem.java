@@ -82,6 +82,16 @@ public final class SimpleMediaItem implements MediaItem {
         return mediaItem;
     }
 
+    public static MediaItem fromChannel(Video video) {
+        SimpleMediaItem mediaItem = new SimpleMediaItem();
+
+        if (video != null) {
+            mediaItem.mChannelId = video.channelId;
+        }
+
+        return mediaItem;
+    }
+
     @Override
     public int getType() {
         return mType;
