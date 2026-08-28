@@ -51,6 +51,8 @@ public class MotherActivity extends FragmentActivity {
     private boolean mEnableThrottleKeyDown;
     private boolean mIsOculusQuestFixEnabled;
     private boolean mIsFullscreenModeEnabled;
+    private final Runnable mOnAppFinish = () -> Utils.forceFinishTheApp(this);
+    private final LongPressBackHandler mLongPressBackHandler = new LongPressBackHandler(this::finishTheApp);
 
     public interface OnPermissions {
         void onPermissions(int requestCode, String[] permissions, int[] grantResults);
@@ -134,6 +136,10 @@ public class MotherActivity extends FragmentActivity {
             return true;
         }
 
+        if (handleLongPressBack(event)) {
+            return true;
+        }
+
         if (event.getAction() == KeyEvent.ACTION_DOWN) {
             boolean isKeepScreenOff = mScreensaverManager.isScreenOff() && Helpers.equalsAny(event.getKeyCode(),
                     new int[]{KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_VOLUME_UP, KeyEvent.KEYCODE_VOLUME_DOWN});
@@ -189,6 +195,25 @@ public class MotherActivity extends FragmentActivity {
         } catch (Exception e) {
             // TextView not attached to window manager (IllegalArgumentException)
         }
+    }
+
+    protected void finishTheApp() {
+        getViewManager().addOnFinish(mOnAppFinish);
+
+        Utils.properlyFinishTheApp(this);
+    }
+
+    private boolean handleLongPressBack(KeyEvent event) {
+        boolean isBack = Helpers.equalsAny(event.getKeyCode(),
+                new int[]{KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE});
+
+        return mLongPressBackHandler.handle(
+                getGeneralData().isLongPressBackExitEnabled(),
+                isBack,
+                event.getAction() == KeyEvent.ACTION_DOWN,
+                event.getAction() == KeyEvent.ACTION_UP,
+                event.getRepeatCount(),
+                event.isLongPress());
     }
 
     @Override

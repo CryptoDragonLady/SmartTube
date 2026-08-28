@@ -86,6 +86,7 @@ public class GeneralData implements ProfileChangeListener {
     private int mLocalDriveBackupFreqDays;
     private List<Video> mOldPinnedItems;
     private boolean mIsRemapSToSpeedToggleEnabled;
+    private boolean mIsLongPressBackExitEnabled;
     private final Runnable mPersistStateInt = this::persistStateInt;
 
     private GeneralData(Context context) {
@@ -135,6 +136,15 @@ public class GeneralData implements ProfileChangeListener {
 
     public void setSearchExitShortcut(int type) {
         mSearchExitShortcut = type;
+        persistState();
+    }
+
+    public boolean isLongPressBackExitEnabled() {
+        return mIsLongPressBackExitEnabled;
+    }
+
+    public void setLongPressBackExitEnabled(boolean enable) {
+        mIsLongPressBackExitEnabled = enable;
         persistState();
     }
 
@@ -660,6 +670,11 @@ public class GeneralData implements ProfileChangeListener {
         mLocalDriveBackupFreqDays = Helpers.parseInt(split, 70, 1);
         //mIsRemapFastForwardToSpeedToggleEnabled = Helpers.parseBoolean(split, 71, false);
         mIsRemapSToSpeedToggleEnabled = Helpers.parseBoolean(split, 72, true);
+        mIsLongPressBackExitEnabled = parseLongPressBackExit(split);
+    }
+
+    static boolean parseLongPressBackExit(String[] split) {
+        return Helpers.parseBoolean(split, 73, false);
     }
 
     public void persistNow() {
@@ -685,7 +700,7 @@ public class GeneralData implements ProfileChangeListener {
                 mIsHideWatchedFromNotificationsEnabled, mChangelog, mPlayerExitShortcut, null, mIsFullscreenModeEnabled, null,
                 mIsRememberPinnedPositionEnabled, mSelectedItems, mIsFirstUseTooltipEnabled, mIsDeviceSpecificBackupEnabled, null,
                 null, mSearchExitShortcut, mGDriveBackupFreqDays, mLocalDriveBackupFreqDays, null,
-                mIsRemapSToSpeedToggleEnabled));
+                mIsRemapSToSpeedToggleEnabled, mIsLongPressBackExitEnabled));
     }
 
     @Override
