@@ -176,7 +176,12 @@ public class VideoStateService implements ProfileChangeListener {
                 video.videoId = videoId;
             }
 
-            video.percentWatched = (positionMs * 100f) / lengthMs;
+            if (lengthMs > 0) {
+                video.percentWatched = (positionMs * 100f) / lengthMs;
+            } else if (lengthMs == -1 && positionMs > 0 && video.percentWatched == 100) {
+                // Legacy "Mark as watched" states stored the position without a duration.
+                lengthMs = positionMs;
+            }
 
             return new State(video, positionMs, lengthMs, speed);
         }
