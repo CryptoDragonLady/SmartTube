@@ -1,5 +1,6 @@
 package com.liskovsoft.smartyoutubetv2.common.exoplayer;
 
+import com.google.android.exoplayer2.upstream.HttpDataSource;
 import com.liskovsoft.mediaserviceinterfaces.data.MediaItemFormatInfo;
 
 final class PlaybackRequestHeaders {
@@ -10,5 +11,11 @@ final class PlaybackRequestHeaders {
         String userAgent = clientInfo != null ? clientInfo.getUserAgent() : null;
         return userAgent != null && !userAgent.trim().isEmpty() ?
                 userAgent : defaultUserAgent;
+    }
+
+    static void applyUserAgent(HttpDataSource.RequestProperties requestProperties, String userAgent) {
+        if (requestProperties != null && userAgent != null && !userAgent.trim().isEmpty()) {
+            requestProperties.set("User-Agent", userAgent);
+        }
     }
 }

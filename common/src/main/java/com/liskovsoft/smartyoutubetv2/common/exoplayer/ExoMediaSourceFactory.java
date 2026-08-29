@@ -307,6 +307,9 @@ public class ExoMediaSourceFactory {
                         (int) OkHttpManager.getReadTimeoutMs(),
                         true,
                         mUserAgent);
+        // CronetDataSourceFactory uses the constructor user agent only for its fallback source.
+        // Real Cronet requests receive headers exclusively through request properties.
+        PlaybackRequestHeaders.applyUserAgent(dataSourceFactory.getDefaultRequestProperties(), mUserAgent);
         addCommonHeaders(dataSourceFactory);
         return dataSourceFactory;
     }

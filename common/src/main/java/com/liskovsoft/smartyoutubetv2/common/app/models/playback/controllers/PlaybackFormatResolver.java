@@ -19,12 +19,14 @@ public final class PlaybackFormatResolver {
             return FORMAT_SABR;
         }
 
-        if (adaptiveAccepted && dashAvailable) {
-            return FORMAT_DASH;
-        }
-
+        // YouTube increasingly returns web responses intended for SABR. Prefer that endpoint when
+        // it is available; direct DASH remains the fallback for native clients and live streams.
         if (adaptiveAccepted && sabrAvailable && !live) {
             return FORMAT_SABR;
+        }
+
+        if (adaptiveAccepted && dashAvailable) {
+            return FORMAT_DASH;
         }
 
         return FORMAT_NONE;

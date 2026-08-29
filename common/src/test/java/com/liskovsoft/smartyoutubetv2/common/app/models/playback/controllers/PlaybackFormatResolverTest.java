@@ -6,9 +6,9 @@ import static org.junit.Assert.assertEquals;
 
 public class PlaybackFormatResolverTest {
     @Test
-    public void dashKeepsPriorityWhenSabrIsNotForced() {
+    public void sabrIsTheSafeDefaultWhenBothAdaptivePathsAreAvailable() {
         assertEquals(
-                PlaybackFormatResolver.FORMAT_DASH,
+                PlaybackFormatResolver.FORMAT_SABR,
                 PlaybackFormatResolver.resolveAdaptiveFormat(true, true, true, false, false));
     }
 
