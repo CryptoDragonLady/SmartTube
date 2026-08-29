@@ -26,8 +26,9 @@ project.ext {
     dexmakerVersion = '2.28.3'
     mockitoVersion = '2.25.0'
     // MOD: use versions from sharedutils
-    // robolectricVersion = '4.2'
-    robolectricVersion = project.properties.robolectricVersion
+    // Robolectric 4.6.1 cannot read JDK 17 classes. Keep the upgrade scoped to the legacy
+    // ExoPlayer test modules rather than changing the app-wide SharedModules dependency.
+    robolectricVersion = '4.7.3'
     annotationXVersion = project.properties.annotationXVersion
     autoValueVersion = '1.6'
     checkerframeworkVersion = '2.5.0'
