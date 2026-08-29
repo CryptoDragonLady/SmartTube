@@ -27,13 +27,7 @@ android {
         targetSdkVersion project.ext.targetSdkVersion
     }
 
-    testOptions {
-        unitTests.includeAndroidResources = true
-        unitTests.all {
-            // ExoPlayer 2.10.6 uses custom shadows built for Robolectric's legacy looper.
-            systemProperty 'robolectric.looperMode', 'LEGACY'
-        }
-    }
+    testOptions.unitTests.includeAndroidResources = true
 }
 
 dependencies {

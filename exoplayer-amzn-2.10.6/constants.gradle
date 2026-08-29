@@ -26,8 +26,7 @@ project.ext {
     dexmakerVersion = '2.28.3'
     mockitoVersion = '2.25.0'
     // MOD: use versions from sharedutils
-    // Robolectric 4.6.1 cannot read JDK 17 classes. Keep the upgrade scoped to the legacy
-    // ExoPlayer test modules rather than changing the app-wide SharedModules dependency.
+    // Robolectric 4.6.1 cannot instrument JDK 17 classes.
     robolectricVersion = '4.7.3'
     annotationXVersion = project.properties.annotationXVersion
     autoValueVersion = '1.6'
@@ -41,4 +40,10 @@ project.ext {
     if (gradle.ext.has('exoplayerModulePrefix')) {
         modulePrefix += gradle.ext.exoplayerModulePrefix
     }
+}
+
+// ExoPlayer 2.10.6 tests and custom shadows predate Robolectric's paused looper. Retain their
+// original scheduling semantics while using the JDK 17-compatible runtime.
+tasks.withType(Test).configureEach {
+    systemProperty 'robolectric.looperMode', 'LEGACY'
 }
