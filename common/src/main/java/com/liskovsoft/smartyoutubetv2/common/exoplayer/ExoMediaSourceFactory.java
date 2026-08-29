@@ -57,7 +57,6 @@ public class ExoMediaSourceFactory {
     @SuppressLint("StaticFieldLeak")
     //private static ExoMediaSourceFactory sInstance;
     private static final int MAX_SEGMENTS_PER_LOAD = 1; // default - 1 (1-5)
-    private static final String USER_AGENT = DefaultHeaders.APP_USER_AGENT;
     @SuppressLint("StaticFieldLeak")
     private static final DefaultBandwidthMeter BANDWIDTH_METER = new DefaultBandwidthMeter();
     private final Context mContext;
@@ -67,9 +66,21 @@ public class ExoMediaSourceFactory {
     private static final boolean USE_BANDWIDTH_METER = false;
     private TrackErrorFixer mTrackErrorFixer;
     private DataSource.Factory mMediaDataSourceFactory;
+    private String mUserAgent = DefaultHeaders.APP_USER_AGENT;
 
     public ExoMediaSourceFactory(Context context) {
         mContext = context;
+    }
+
+    public void setRequestContext(MediaItemFormatInfo formatInfo) {
+        String userAgent = PlaybackRequestHeaders.resolveUserAgent(
+                formatInfo != null ? formatInfo.getClientInfo() : null,
+                DefaultHeaders.APP_USER_AGENT);
+
+        if (!userAgent.equals(mUserAgent)) {
+            mUserAgent = userAgent;
+            mMediaDataSourceFactory = null;
+        }
     }
 
     public MediaSource fromSabrFormatInfo(MediaItemFormatInfo formatInfo) {
@@ -279,7 +290,7 @@ public class ExoMediaSourceFactory {
      * Use OkHttp for networking
      */
     private HttpDataSource.Factory buildOkHttpDataSourceFactory(DefaultBandwidthMeter bandwidthMeter) {
-        OkHttpDataSourceFactory dataSourceFactory = new OkHttpDataSourceFactory(OkHttpManager.instance().getClient(), USER_AGENT,
+        OkHttpDataSourceFactory dataSourceFactory = new OkHttpDataSourceFactory(OkHttpManager.instance().getClient(), mUserAgent,
                 bandwidthMeter);
         addCommonHeaders(dataSourceFactory);
         return dataSourceFactory;
@@ -295,7 +306,7 @@ public class ExoMediaSourceFactory {
                         (int) OkHttpManager.getConnectTimeoutMs(),
                         (int) OkHttpManager.getReadTimeoutMs(),
                         true,
-                        USER_AGENT);
+                        mUserAgent);
         addCommonHeaders(dataSourceFactory);
         return dataSourceFactory;
     }
@@ -305,7 +316,7 @@ public class ExoMediaSourceFactory {
      */
     private HttpDataSource.Factory buildDefaultHttpDataSourceFactory(DefaultBandwidthMeter bandwidthMeter) {
         DefaultHttpDataSourceFactory dataSourceFactory = new DefaultHttpDataSourceFactory(
-                USER_AGENT, bandwidthMeter, (int) OkHttpManager.getConnectTimeoutMs(),
+                mUserAgent, bandwidthMeter, (int) OkHttpManager.getConnectTimeoutMs(),
                 (int) OkHttpManager.getReadTimeoutMs(), true); // allowCrossProtocolRedirects = true
 
         addCommonHeaders(dataSourceFactory); // cause troubles for some users
