@@ -27,7 +27,13 @@ android {
         targetSdkVersion project.ext.targetSdkVersion
     }
 
-    testOptions.unitTests.includeAndroidResources = true
+    testOptions {
+        unitTests.includeAndroidResources = true
+        unitTests.all {
+            // ExoPlayer 2.10.6 uses custom shadows built for Robolectric's legacy looper.
+            systemProperty 'robolectric.looperMode', 'LEGACY'
+        }
+    }
 }
 
 dependencies {
@@ -38,6 +44,8 @@ dependencies {
     compileOnly 'org.checkerframework:checker-qual:' + checkerframeworkVersion
     compileOnly 'org.checkerframework:checker-compat-qual:' + checkerframeworkVersion
     testImplementation project(modulePrefix + 'testutils-robolectric')
+    // Robolectric 4.6.1 cannot run on JDK 17. Keep this upgrade scoped to Cast tests.
+    testImplementation 'org.robolectric:robolectric:4.7.3'
 }
 
 ext {
