@@ -106,7 +106,7 @@ Important evidence label: these are **source-derived synthetic fixtures**, not a
 Build/install the debug APK, then launch the resolver explicitly:
 
 ```powershell
-adb install -r .\smarttubetv\build\outputs\apk\stbeta\debug\SmartTube_beta_32.39_universal.apk
+adb install -r .\smarttubetv\build\outputs\apk\stbeta\debug\SmartTube_beta_32.41_universal.apk
 adb shell am start -n org.smarttube.beta/com.liskovsoft.smartyoutubetv2.tv.ui.debug.SabrLivePlayerActivity --es live_input "@handle"
 ```
 
