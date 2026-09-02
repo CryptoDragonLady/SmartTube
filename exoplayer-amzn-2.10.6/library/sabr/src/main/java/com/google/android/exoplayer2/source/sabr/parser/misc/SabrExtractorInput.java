@@ -152,7 +152,7 @@ public final class SabrExtractorInput implements ExtractorInput {
         return -1;
     }
 
-    private void fetchData() {
+    private void fetchData() throws IOException {
         while (true) {
             if (data != null) {
                 long advance = getAdvance();

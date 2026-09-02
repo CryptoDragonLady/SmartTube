@@ -523,6 +523,7 @@ public class ChunkSampleStream<T extends ChunkSource> implements SampleStream, S
               : Loader.DONT_RETRY_FATAL;
     }
 
+    chunkSource.onChunkLoadErrorResolved(loadable, loadErrorAction.isRetry());
     boolean canceled = !loadErrorAction.isRetry();
     eventDispatcher.loadError(
         loadable.dataSpec,

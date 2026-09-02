@@ -544,6 +544,13 @@ public class VideoLoaderController extends BasePlayerController {
             return;
         }
         PlaybackView player = getPlayer();
+        if (player != null && formatInfo.containsUrlFormats()) {
+            stopLivePlaybackSession();
+            mLiveTerminalFailure = false;
+            Log.d(TAG, "Loading live URL list fallback. This is always LQ...");
+            player.openUrlList(formatInfo.createUrlList());
+            return;
+        }
         if (player != null) {
             mLiveTerminalFailure = true;
             player.setTitle(formatInfo.getPlayabilityReason() != null

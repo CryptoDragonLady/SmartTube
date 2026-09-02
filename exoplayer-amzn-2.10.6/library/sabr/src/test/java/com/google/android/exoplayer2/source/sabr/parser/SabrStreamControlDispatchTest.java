@@ -16,7 +16,7 @@ import org.junit.Test;
 
 public class SabrStreamControlDispatchTest {
     @Test
-    public void liveMetadataAndSabrSeekReachSharedSessionHandlers() {
+    public void liveMetadataAndSabrSeekReachSharedSessionHandlers() throws Exception {
         SabrSessionCoordinator coordinator = coordinator();
         SabrStream stream = stream(coordinator);
         LiveMetadata live = LiveMetadata.newBuilder()
@@ -46,7 +46,7 @@ public class SabrStreamControlDispatchTest {
     }
 
     @Test
-    public void futureHighNumberedPartIsSkippedWithoutFailure() {
+    public void futureHighNumberedPartIsSkippedWithoutFailure() throws Exception {
         SabrSessionCoordinator coordinator = coordinator();
         SabrStream stream = stream(coordinator);
         LiveMetadata live = LiveMetadata.newBuilder()

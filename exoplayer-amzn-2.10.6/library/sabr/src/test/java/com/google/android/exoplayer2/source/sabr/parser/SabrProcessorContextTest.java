@@ -7,7 +7,9 @@ import static org.junit.Assert.assertTrue;
 
 import com.google.android.exoplayer2.source.sabr.protos.videostreaming.SabrContextSendingPolicy;
 import com.google.android.exoplayer2.source.sabr.protos.videostreaming.SabrContextUpdate;
+import com.google.android.exoplayer2.source.sabr.protos.videostreaming.StreamProtectionStatus;
 import com.google.android.exoplayer2.source.sabr.protos.videostreaming.StreamerContext;
+import com.google.android.exoplayer2.source.sabr.parser.parts.PoTokenStatusSabrPart.PoTokenStatus;
 import com.google.protobuf.ByteString;
 
 import org.junit.Test;
@@ -102,6 +104,18 @@ public class SabrProcessorContextTest {
         StreamerContext context = createProcessor(null).createStreamerContext();
 
         assertFalse(context.hasPoToken());
+    }
+
+    @Test
+    public void requiredProtectionIsReportedBeforeRefreshHandling() {
+        SabrProcessor processor = createProcessor(null);
+
+        PoTokenStatus status = processor.processStreamProtectionStatus(
+                StreamProtectionStatus.newBuilder()
+                        .setStatus(StreamProtectionStatus.Status.ATTESTATION_REQUIRED)
+                        .build()).sabrPart.status;
+
+        assertEquals(PoTokenStatus.MISSING, status);
     }
 
     private static SabrProcessor createProcessor(String poToken) {

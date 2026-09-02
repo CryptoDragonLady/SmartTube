@@ -57,7 +57,7 @@ public final class SabrResponseDemuxer {
     private final @Nullable ControlHandler controlHandler;
     private final LinkedHashMap<Long, PartialSegment> partial = new LinkedHashMap<>();
     private final ArrayDeque<CompletedSegment> completed = new ArrayDeque<>();
-    private final LinkedHashMap<String, CompletedSegment> initializationCache = new LinkedHashMap<>();
+    private final LinkedHashMap<FormatId, CompletedSegment> initializationCache = new LinkedHashMap<>();
     private final LinkedHashSet<Long> endedHeaderIds = new LinkedHashSet<>();
     private long generation;
     private int storedBytes;
@@ -130,7 +130,7 @@ public final class SabrResponseDemuxer {
     }
 
     public synchronized @Nullable CompletedSegment getInitialization(FormatId formatId) {
-        return initializationCache.get(formatId.toString());
+        return initializationCache.get(formatId);
     }
 
     public synchronized int getPartialCount() { return partial.size(); }
@@ -217,8 +217,7 @@ public final class SabrResponseDemuxer {
         CompletedSegment result = new CompletedSegment(segment.header, segment.data.toByteArray());
         rememberEnded(prefix.value);
         if (result.isInitialization()) {
-            String key = result.header.getFormatId().toString();
-            CompletedSegment replaced = initializationCache.put(key, result);
+            CompletedSegment replaced = initializationCache.put(result.header.getFormatId(), result);
             if (replaced != null) {
                 storedBytes -= replaced.data.length;
             }

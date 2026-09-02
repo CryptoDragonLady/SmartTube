@@ -69,7 +69,7 @@ public class UMPDecoder {
         this.maxBufferedPayloadBytes = maxBufferedPayloadBytes;
     }
 
-    public UMPPart decode(@NonNull ExtractorInput extractorInput) {
+    public UMPPart decode(@NonNull ExtractorInput extractorInput) throws IOException {
         try {
             long decodedPartType = readVarInt(extractorInput);
             int partType = (int) decodedPartType;
@@ -93,7 +93,7 @@ public class UMPDecoder {
             }
 
             return new UMPPart(partType, (int) decodedPartSize, extractorInput);
-        } catch (IOException | InterruptedException e) {
+        } catch (InterruptedException e) {
             throw new IllegalStateException(e);
         }
     }

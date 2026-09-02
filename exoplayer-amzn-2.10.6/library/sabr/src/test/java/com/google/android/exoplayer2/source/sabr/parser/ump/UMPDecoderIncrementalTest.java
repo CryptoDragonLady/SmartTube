@@ -5,6 +5,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import com.google.android.exoplayer2.testutil.FakeExtractorInput;
+
+import java.io.EOFException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -108,6 +111,13 @@ public class UMPDecoderIncrementalTest {
         assertProtocolError(UMPProtocolException.Reason.CANCELLED,
                 () -> decoder.feed(frame, frame.length - 1, 1));
         assertEquals(0, decoder.getBufferedByteCount());
+    }
+
+    @Test(expected = EOFException.class)
+    public void extractorDecodePreservesTruncatedVarintEof() throws Exception {
+        decoder().decode(new FakeExtractorInput.Builder()
+                .setData(new byte[] {(byte) 0x80})
+                .build());
     }
 
     private static UMPDecoder decoder() {

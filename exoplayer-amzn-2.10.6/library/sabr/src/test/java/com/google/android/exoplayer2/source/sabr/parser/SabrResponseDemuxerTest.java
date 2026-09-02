@@ -80,7 +80,8 @@ public class SabrResponseDemuxerTest {
         demuxer.consume(1, mediaFrame(1, new byte[] {7}));
         SabrResponseDemuxer.CompletedSegment init = demuxer.consume(1, endFrame(1)).get(0);
         demuxer.setGeneration(2);
-        assertArrayEquals(new byte[] {7}, demuxer.getInitialization(VIDEO).getData());
+        assertArrayEquals(new byte[] {7}, demuxer.getInitialization(
+                FormatId.newBuilder().setItag(248).build()).getData());
 
         complete(demuxer, 2, 2, VIDEO, 1, new byte[] {1});
         complete(demuxer, 2, 3, VIDEO, 2, new byte[] {2});

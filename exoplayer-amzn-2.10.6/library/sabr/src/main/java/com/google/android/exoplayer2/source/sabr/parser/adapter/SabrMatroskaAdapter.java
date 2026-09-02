@@ -24,15 +24,14 @@ public class SabrMatroskaAdapter extends MatroskaExtractor {
 
     @Override
     public int read(ExtractorInput input, PositionHolder seekPosition)
-            throws IOException, InterruptedException {
+            throws IOException {
         int result = RESULT_END_OF_INPUT;
 
         try {
             extractorInput.init(input);
             result = super.read(extractorInput, seekPosition);
-        } catch (Exception e) {
-            Log.e(TAG, "User doing seek? %s: %s", e.getClass().getSimpleName(), e.getMessage());
-            e.printStackTrace();
+        } catch (InterruptedException e) {
+            throw new IllegalStateException(e);
         } finally {
             if (result != RESULT_CONTINUE) {
                 Log.e(TAG, "MatroskaAdapter: disposing, result=%s", result);

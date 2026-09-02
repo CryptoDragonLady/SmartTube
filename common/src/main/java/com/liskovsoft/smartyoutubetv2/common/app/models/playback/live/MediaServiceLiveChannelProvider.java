@@ -10,12 +10,12 @@ import com.liskovsoft.sharedutils.mylogger.Log;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 import io.reactivex.Observable;
@@ -32,7 +32,7 @@ public final class MediaServiceLiveChannelProvider implements LiveChannelResolve
     private final LiveRouteResolver routeResolver;
     private final LiveCandidateStrategyChain strategyChain;
     private final LiveCandidateVerifier verifier = new LiveCandidateVerifier();
-    private final Map<String, CanonicalCacheEntry> canonicalCache = new HashMap<>();
+    private final Map<String, CanonicalCacheEntry> canonicalCache = new ConcurrentHashMap<>();
 
     public MediaServiceLiveChannelProvider(ContentService contentService,
                                            MediaItemService mediaItemService) {
@@ -105,9 +105,17 @@ public final class MediaServiceLiveChannelProvider implements LiveChannelResolve
                         }))
                 .doOnNext(identity -> {
                     if (!isEmpty(identity.canonicalChannelId)) {
+                        long writeTime = System.currentTimeMillis();
+                        for (Map.Entry<String, CanonicalCacheEntry> cacheItem : canonicalCache.entrySet()) {
+                            String key = cacheItem.getKey();
+                            CanonicalCacheEntry entry = cacheItem.getValue();
+                            if (writeTime >= entry.expiresAtMs) {
+                                canonicalCache.remove(key, entry);
+                            }
+                        }
                         canonicalCache.put(reference, new CanonicalCacheEntry(
                                 identity.canonicalChannelId,
-                                saturatedAdd(System.currentTimeMillis(), CANONICAL_CACHE_MS)));
+                                saturatedAdd(writeTime, CANONICAL_CACHE_MS)));
                     }
                 });
     }

@@ -163,7 +163,7 @@ public class SabrStream {
     }
 
 
-    public SabrPart parse(@NonNull ExtractorInput extractorInput) {
+    public SabrPart parse(@NonNull ExtractorInput extractorInput) throws IOException {
         SabrPart result = null;
 
         while (result == null && (multiResult == null || multiResult.isEmpty())) {
@@ -528,7 +528,7 @@ public class SabrStream {
         return false;
     }
 
-    private UMPPart nextKnownUMPPart(@NonNull ExtractorInput extractorInput) {
+    private UMPPart nextKnownUMPPart(@NonNull ExtractorInput extractorInput) throws IOException {
         UMPPart part;
 
         while (true) {

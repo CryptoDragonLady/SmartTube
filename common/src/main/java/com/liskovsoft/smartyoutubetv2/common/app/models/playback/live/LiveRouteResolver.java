@@ -24,8 +24,11 @@ final class LiveRouteResolver {
     private static final Pattern CANONICAL_WATCH = Pattern.compile(
             "(?:canonical|canonicalUrl)[^\\n]{0,240}?(?:watch\\?v=|watch\\\\u003fv\\\\u003d)([A-Za-z0-9_-]{11})",
             Pattern.CASE_INSENSITIVE);
-    private static final Pattern CANONICAL_CHANNEL = Pattern.compile(
-            "(?:canonical|channelId|browseId)[^\\n]{0,240}?(UC[A-Za-z0-9_-]{22})",
+    private static final Pattern OWNER_CHANNEL_LINK = Pattern.compile(
+            "<link\\b(?=[^>]*\\bitemprop\\s*=\\s*[\\\"']url[\\\"'])[^>]*\\bhref\\s*=\\s*[\\\"'][^\\\"']*/channel/(UC[A-Za-z0-9_-]{22})",
+            Pattern.CASE_INSENSITIVE);
+    private static final Pattern OWNER_CHANNEL_META = Pattern.compile(
+            "<meta\\b(?=[^>]*\\bitemprop\\s*=\\s*[\\\"']identifier[\\\"'])[^>]*\\bcontent\\s*=\\s*[\\\"'](UC[A-Za-z0-9_-]{22})[\\\"']",
             Pattern.CASE_INSENSITIVE);
 
     static final class Snapshot {
@@ -130,8 +133,11 @@ final class LiveRouteResolver {
 
     static String extractCanonicalChannelId(String body, String fallback) {
         if (isChannelId(fallback)) return fallback;
-        Matcher matcher = CANONICAL_CHANNEL.matcher(body != null ? body : "");
-        return matcher.find() ? matcher.group(1) : fallback;
+        String html = body != null ? body : "";
+        Matcher link = OWNER_CHANNEL_LINK.matcher(html);
+        if (link.find()) return link.group(1);
+        Matcher meta = OWNER_CHANNEL_META.matcher(html);
+        return meta.find() ? meta.group(1) : fallback;
     }
 
     private static String routeFor(String reference) {

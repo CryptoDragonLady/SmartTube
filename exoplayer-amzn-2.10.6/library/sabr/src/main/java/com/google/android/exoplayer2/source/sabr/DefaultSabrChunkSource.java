@@ -435,7 +435,6 @@ public class DefaultSabrChunkSource implements SabrChunkSource {
 
     @Override
     public boolean onChunkLoadError(Chunk chunk, boolean cancelable, Exception e, long blacklistDurationMs) {
-        completeSessionRequest(chunk);
         Log.e(TAG, "Chunk load failed: " + e.getClass().getSimpleName());
         if (!cancelable) {
             return false;
@@ -471,6 +470,13 @@ public class DefaultSabrChunkSource implements SabrChunkSource {
         //}
         return blacklistDurationMs != C.TIME_UNSET
                 && trackSelection.blacklist(trackSelection.indexOf(chunk.trackFormat), blacklistDurationMs);
+    }
+
+    @Override
+    public void onChunkLoadErrorResolved(Chunk chunk, boolean willRetry) {
+        if (!willRetry) {
+            completeSessionRequest(chunk);
+        }
     }
 
     static Map<String, String> createSabrRequestHeaders() {

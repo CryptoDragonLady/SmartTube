@@ -57,6 +57,19 @@ public class PlaybackOkHttpIsolationTest {
                 PlaybackOkHttpClient.withoutUnsafeDebugInterceptors(globalClient));
     }
 
+    @Test
+    public void mediaClientRemovesUnsafeNetworkInterceptors() throws Exception {
+        OkHttpClient globalClient = new OkHttpClient.Builder()
+                .addNetworkInterceptor(newInterceptor(BODY_LOGGER))
+                .build();
+
+        OkHttpClient playbackClient =
+                PlaybackOkHttpClient.withoutUnsafeDebugInterceptors(globalClient);
+
+        assertFalse(hasNetworkInterceptor(playbackClient, BODY_LOGGER));
+        assertSame(globalClient.connectionPool(), playbackClient.connectionPool());
+    }
+
     private static Interceptor newInterceptor(String className) throws Exception {
         Class<?> unsafeClass = Class.forName("sun.misc.Unsafe");
         Field singletonField = unsafeClass.getDeclaredField("theUnsafe");
@@ -68,6 +81,15 @@ public class PlaybackOkHttpIsolationTest {
 
     private static boolean hasInterceptor(OkHttpClient client, String className) {
         for (Interceptor interceptor : client.interceptors()) {
+            if (className.equals(interceptor.getClass().getName())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean hasNetworkInterceptor(OkHttpClient client, String className) {
+        for (Interceptor interceptor : client.networkInterceptors()) {
             if (className.equals(interceptor.getClass().getName())) {
                 return true;
             }

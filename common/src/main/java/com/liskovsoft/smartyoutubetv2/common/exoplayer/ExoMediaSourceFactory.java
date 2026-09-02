@@ -106,7 +106,8 @@ public class ExoMediaSourceFactory {
     }
 
     public MediaSource fromSabrFormatInfo(MediaItemFormatInfo formatInfo) {
-        setIpv4BoundMedia(false);
+        setIpv4BoundMedia(PlaybackNetworkRoute.isIpv4BoundGoogleVideoUrl(
+                formatInfo != null ? formatInfo.getServerAbrStreamingUrl() : null));
         return buildSabrMediaSource(formatInfo);
     }
 
@@ -311,6 +312,11 @@ public class ExoMediaSourceFactory {
     }
 
     private SabrManifest getSabrManifest(MediaItemFormatInfo formatInfo) {
+        PlaybackRequestContext context = formatInfo != null ? formatInfo.getPlaybackRequestContext() : null;
+        if (formatInfo == null || (formatInfo.getClientInfo() == null
+                && (context == null || context.getRequestClient() == null))) {
+            throw new IllegalArgumentException("SABR client information is unavailable");
+        }
         SabrManifestParser parser = new SabrManifestParser();
         return parser.parse(formatInfo);
     }

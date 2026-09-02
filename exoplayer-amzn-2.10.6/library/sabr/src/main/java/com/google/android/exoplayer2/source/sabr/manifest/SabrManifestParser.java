@@ -21,6 +21,7 @@ import com.google.android.exoplayer2.util.MimeTypes;
 import com.liskovsoft.mediaserviceinterfaces.data.MediaFormat;
 import com.liskovsoft.mediaserviceinterfaces.data.MediaItemFormatInfo;
 import com.liskovsoft.mediaserviceinterfaces.data.MediaSubtitle;
+import com.liskovsoft.mediaserviceinterfaces.data.PlaybackRequestContext;
 import com.liskovsoft.sharedutils.helpers.Helpers;
 import com.liskovsoft.youtubeapi.formatbuilders.mpdbuilder.MediaFormatComparator;
 import com.liskovsoft.youtubeapi.formatbuilders.utils.ITagUtils;
@@ -714,6 +715,13 @@ public class SabrManifestParser {
 
     private ClientInfo createClientInfo(MediaItemFormatInfo formatInfo) {
         MediaItemFormatInfo.ClientInfo clientInfo = formatInfo.getClientInfo();
+        PlaybackRequestContext context = formatInfo.getPlaybackRequestContext();
+        if (clientInfo == null && context != null) {
+            clientInfo = context.getRequestClient();
+        }
+        if (clientInfo == null) {
+            throw new IllegalArgumentException("SABR client information is unavailable");
+        }
 
         return ClientInfo.newBuilder()
                 .setClientName(ClientName.valueOf(clientInfo.getClientName().toUpperCase()))

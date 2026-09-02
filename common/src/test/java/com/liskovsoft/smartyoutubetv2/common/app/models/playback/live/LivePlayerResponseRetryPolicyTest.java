@@ -54,4 +54,15 @@ public class LivePlayerResponseRetryPolicyTest {
         assertTrue(policy.tryRetireForbiddenGeneration(51));
         assertEquals(1, policy.getPlayerResponseCount());
     }
+
+    @Test public void unknownGenerationsAreAlwaysFreshResponses() {
+        LivePlayerResponseRetryPolicy policy = new LivePlayerResponseRetryPolicy(3);
+
+        policy.onPlayerResponse(-1);
+        assertTrue(policy.tryRetireForbiddenGeneration(-1));
+        policy.onPlayerResponse(-1);
+
+        assertEquals(2, policy.getPlayerResponseCount());
+        assertTrue(policy.tryRetireForbiddenGeneration(-1));
+    }
 }

@@ -32,4 +32,16 @@ public class LiveRouteResolverTest {
         assertEquals(expected, LiveRouteResolver.extractCanonicalChannelId(
                 "{\"channelId\":\"UC9999999999999999999999\"}", expected));
     }
+
+    @Test public void extractsChannelOnlyFromOwnerMarkers() {
+        String expected = "UC1234567890123456789012";
+        assertEquals(expected, LiveRouteResolver.extractCanonicalChannelId(
+                "<link itemprop=\"url\" href=\"https://www.youtube.com/channel/" + expected + "\">",
+                null));
+        assertEquals(expected, LiveRouteResolver.extractCanonicalChannelId(
+                "<meta content=\"" + expected + "\" itemprop=\"identifier\">", null));
+        assertNull(LiveRouteResolver.extractCanonicalChannelId(
+                "{\"channelId\":\"" + expected + "\",\"browseId\":\"" + expected + "\"}",
+                null));
+    }
 }

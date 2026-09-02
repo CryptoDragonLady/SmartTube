@@ -182,9 +182,13 @@ public final class SabrSessionCoordinator {
             builder.setPlaybackCookie(nextRequestPolicy.getPlaybackCookie().toByteString());
         }
         if (poToken != null) {
-            byte[] decoded = decodeUrlSafeBase64(poToken);
-            if (decoded.length > 0) {
-                builder.setPoToken(ByteString.copyFrom(decoded));
+            try {
+                byte[] decoded = decodeUrlSafeBase64(poToken);
+                if (decoded != null && decoded.length > 0) {
+                    builder.setPoToken(ByteString.copyFrom(decoded));
+                }
+            } catch (IllegalArgumentException ignored) {
+                // Malformed protection tokens are omitted and handled by protection status.
             }
         }
         return builder.build();
@@ -290,8 +294,7 @@ public final class SabrSessionCoordinator {
     public synchronized void processProtectionStatus(
             StreamProtectionStatus status, @Nullable PoTokenRefreshProvider provider)
             throws SabrSessionException {
-        protectionStatus = status.hasStatus()
-                ? status.getStatus() : StreamProtectionStatus.Status.UNKNOWN;
+        recordProtectionStatus(status);
         if (protectionStatus == StreamProtectionStatus.Status.OK) {
             return;
         }
@@ -327,6 +330,11 @@ public final class SabrSessionCoordinator {
                     SabrSessionException.Category.PROTECTION,
                     "Stream protection token refresh failed", refreshFailure);
         }
+    }
+
+    public synchronized void recordProtectionStatus(StreamProtectionStatus status) {
+        protectionStatus = status.hasStatus()
+                ? status.getStatus() : StreamProtectionStatus.Status.UNKNOWN;
     }
 
     public synchronized SabrSessionSnapshot snapshot() {

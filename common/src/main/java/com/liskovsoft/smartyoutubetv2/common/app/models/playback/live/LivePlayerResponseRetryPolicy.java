@@ -19,7 +19,7 @@ public final class LivePlayerResponseRetryPolicy {
     }
 
     public void onPlayerResponse(long generation) {
-        if (generation == activeGeneration && playerResponseCount > 0) {
+        if (generation != -1 && generation == activeGeneration && playerResponseCount > 0) {
             return;
         }
         activeGeneration = generation;

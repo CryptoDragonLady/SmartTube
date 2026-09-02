@@ -447,11 +447,6 @@ public class SabrProcessor {
 
     public ProcessStreamProtectionStatusResult processStreamProtectionStatus(StreamProtectionStatus streamProtectionStatus) {
         this.streamProtectionStatus = streamProtectionStatus.hasStatus() ? streamProtectionStatus.getStatus() : null;
-        try {
-            sessionCoordinator.processProtectionStatus(streamProtectionStatus, null);
-        } catch (SabrSessionException protectionFailure) {
-            throw new SabrStreamError(protectionFailure.getMessage());
-        }
         Status status = streamProtectionStatus.getStatus();
         String poToken = this.poToken;
         PoTokenStatus resultStatus = null;
@@ -470,6 +465,16 @@ public class SabrProcessor {
 
         if (resultStatus != null) {
             result.sabrPart = new PoTokenStatusSabrPart(resultStatus);
+        }
+
+        if (status == Status.ATTESTATION_REQUIRED) {
+            sessionCoordinator.recordProtectionStatus(streamProtectionStatus);
+        } else {
+            try {
+                sessionCoordinator.processProtectionStatus(streamProtectionStatus, null);
+            } catch (SabrSessionException protectionFailure) {
+                throw new SabrStreamError(protectionFailure.getMessage());
+            }
         }
 
         return result;

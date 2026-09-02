@@ -47,13 +47,10 @@ public class ErrorFixerController extends BasePlayerController implements OnLong
             return;
         }
 
-        if (mVideoLoaderController != null && mVideoLoaderController.handleLiveNoProgress()) {
-            Log.w(TAG, "Live stall handled by bounded source fallback");
-            return;
-        }
-
         if (isStreamEnded()) {
             getMainController().onPlayEnd();
+        } else if (mVideoLoaderController != null && mVideoLoaderController.handleLiveNoProgress()) {
+            Log.w(TAG, "Live stall handled by bounded source fallback");
         } else if (isOfflineVideo() && isSubtitlesEnabled()) {
             // Long loading subtitles cause hangs
             disableSubtitles();

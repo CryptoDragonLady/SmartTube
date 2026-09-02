@@ -54,6 +54,21 @@ public class SabrSessionCoordinatorTest {
     }
 
     @Test
+    public void malformedPoTokenIsOmittedFromStreamerContext() {
+        SabrSessionCoordinator coordinator = new SabrSessionCoordinator(
+                "https://media.example.test/sabr?id=broadcast",
+                "%not-base64%",
+                "video-id",
+                false,
+                () -> 1000);
+
+        StreamerContext context = coordinator.createStreamerContext(
+                StreamerContext.ClientInfo.newBuilder().build());
+
+        assertFalse(context.hasPoToken());
+    }
+
+    @Test
     public void startWithoutValueIsReportedAsUnsent() {
         SabrSessionCoordinator coordinator = coordinator();
         coordinator.processContextSendingPolicy(SabrContextSendingPolicy.newBuilder()

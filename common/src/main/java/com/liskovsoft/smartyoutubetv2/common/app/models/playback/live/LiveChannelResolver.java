@@ -1,9 +1,9 @@
 package com.liskovsoft.smartyoutubetv2.common.app.models.playback.live;
 
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import io.reactivex.Observable;
 
@@ -85,7 +85,7 @@ public final class LiveChannelResolver {
     private final Provider provider;
     private final Clock clock;
     private final long cacheMs;
-    private final Map<String, CacheEntry> cache = new HashMap<>();
+    private final Map<String, CacheEntry> cache = new ConcurrentHashMap<>();
 
     public LiveChannelResolver(Provider provider) {
         this(provider, System::currentTimeMillis, DEFAULT_CACHE_MS);
@@ -147,8 +147,16 @@ public final class LiveChannelResolver {
                 result.status == LiveChannelResolution.Status.CANCELLED) {
             return;
         }
+        long now = clock.nowMs();
+        for (Map.Entry<String, CacheEntry> cached : cache.entrySet()) {
+            String cacheKey = cached.getKey();
+            CacheEntry entry = cached.getValue();
+            if (now >= entry.expiresAtMs) {
+                cache.remove(cacheKey, entry);
+            }
+        }
         long ttl = result.status == LiveChannelResolution.Status.LIVE ? cacheMs : Math.min(cacheMs, 10_000);
-        cache.put(key, new CacheEntry(result, saturatedAdd(clock.nowMs(), ttl)));
+        cache.put(key, new CacheEntry(result, saturatedAdd(now, ttl)));
     }
 
     private static long saturatedAdd(long value, long delta) {
