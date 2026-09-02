@@ -173,10 +173,7 @@ public class DefaultSabrChunkSource implements SabrChunkSource {
         //this.sabrStream.setCaptionSelection(createCaptionSelection(trackType, trackSelection));
         this.sabrStream.setFormatSelector(formatSelector);
 
-        sabrHeaders = new HashMap<>();
-        sabrHeaders.put("Content-Type", "application/x-protobuf");
-        //sabrHeaders.put("Accept-Encoding", "identity");
-        sabrHeaders.put("Accept", "application/vnd.yt-ump");
+        sabrHeaders = createSabrRequestHeaders();
 
         List<Representation> representations = getRepresentations();
         representationHolders = new RepresentationHolder[trackSelection.length()];
@@ -215,6 +212,7 @@ public class DefaultSabrChunkSource implements SabrChunkSource {
     public void updateTrackSelection(TrackSelection trackSelection) {
         this.trackSelection = trackSelection;
         this.formatSelector = createFormatSelector(trackType, trackSelection);
+        this.sabrStream.setFormatSelector(formatSelector);
     }
 
     @Override
@@ -232,7 +230,7 @@ public class DefaultSabrChunkSource implements SabrChunkSource {
         //    }
         //}
         // We don't have a segment index to adjust the seek position with yet.
-        return positionUs;
+        return manifest.clampSeekPositionUs(positionUs);
     }
 
     @Override
@@ -259,6 +257,9 @@ public class DefaultSabrChunkSource implements SabrChunkSource {
         }
 
         long bufferedDurationUs = loadPositionUs - playbackPositionUs;
+        if (!manifest.shouldIssueRequest(trackType, bufferedDurationUs)) {
+            return;
+        }
         long timeToLiveEdgeUs = resolveTimeToLiveEdgeUs(playbackPositionUs);
         long presentationPositionUs =
                 C.msToUs(manifest.availabilityStartTimeMs)
@@ -408,6 +409,7 @@ public class DefaultSabrChunkSource implements SabrChunkSource {
 
     @Override
     public void onChunkLoadCompleted(Chunk chunk) {
+        completeSessionRequest(chunk);
         if (chunk instanceof InitializationChunk) {
             InitializationChunk initializationChunk = (InitializationChunk) chunk;
             int trackIndex = trackSelection.indexOf(initializationChunk.trackFormat);
@@ -433,7 +435,7 @@ public class DefaultSabrChunkSource implements SabrChunkSource {
 
     @Override
     public boolean onChunkLoadError(Chunk chunk, boolean cancelable, Exception e, long blacklistDurationMs) {
-        Log.e(TAG, "Chunk load failed: " + e.getMessage());
+        Log.e(TAG, "Chunk load failed: " + e.getClass().getSimpleName());
         if (!cancelable) {
             return false;
         }
@@ -468,6 +470,33 @@ public class DefaultSabrChunkSource implements SabrChunkSource {
         //}
         return blacklistDurationMs != C.TIME_UNSET
                 && trackSelection.blacklist(trackSelection.indexOf(chunk.trackFormat), blacklistDurationMs);
+    }
+
+    @Override
+    public void onChunkLoadErrorResolved(Chunk chunk, boolean willRetry) {
+        if (!willRetry) {
+            completeSessionRequest(chunk);
+        }
+    }
+
+    static Map<String, String> createSabrRequestHeaders() {
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Content-Type", "application/x-protobuf");
+        headers.put("Accept-Encoding", "identity");
+        headers.put("Accept", "application/vnd.yt-ump");
+        return headers;
+    }
+
+    private void completeSessionRequest(Chunk chunk) {
+        String requestNumber = chunk.dataSpec.uri.getQueryParameter("rn");
+        if (requestNumber == null) {
+            return;
+        }
+        try {
+            manifest.completeRequest(Long.parseLong(requestNumber));
+        } catch (NumberFormatException ignored) {
+            // The endpoint is server-provided. An invalid rn is not allowed to corrupt session state.
+        }
     }
 
     private static boolean isEndpointConnectionFailure(Chunk chunk, Exception error) {
@@ -543,12 +572,14 @@ public class DefaultSabrChunkSource implements SabrChunkSource {
         // MOD: add protobuf data
         //DataSpec dataSpec = new DataSpec(requestUri.resolveUri(baseUrl), requestUri.start,
         //        requestUri.length, representationHolder.representation.getCacheKey());
+        SabrManifest.Request request = manifest.createRequest(
+                trackType, true, C.TIME_UNSET);
         DataSpec dataSpec = new DataSpec(
                 //Uri.parse(sabrStream.getRequestUrl()),
-                Uri.parse(manifest.getRequestUrl(trackType)),
+                Uri.parse(request.url),
                 DataSpec.HTTP_METHOD_POST,
                 //sabrStream.createVideoPlaybackAbrRequest(trackType, true).toByteArray(),
-                manifest.createVideoPlaybackAbrRequest(trackType, true).toByteArray(),
+                request.body,
                 0, 0, C.LENGTH_UNSET,
                 //requestUri.start,
                 //requestUri.start,
@@ -556,7 +587,8 @@ public class DefaultSabrChunkSource implements SabrChunkSource {
                 representationHolder.representation.getCacheKey(),
                 0,
                 sabrHeaders);
-        Log.e(TAG, "Load init chunk: track=" + trackType + ", rn=" + manifest.getSabrRequestNumber());
+        Log.d(TAG, "Load init chunk: track=" + trackType + ", rn=" + request.requestNumber
+                + ", generation=" + request.generation);
         return new InitializationChunk(dataSource, dataSpec, trackFormat,
                 trackSelectionReason, trackSelectionData, representationHolder.extractorWrapper);
     }
@@ -606,13 +638,15 @@ public class DefaultSabrChunkSource implements SabrChunkSource {
         //String baseUrl = representation.baseUrl;
         //baseUrl = Utils.updateQuery(baseUrl, "rn", sabrStream.getIncSabrRequestNumber());
 
+        SabrManifest.Request request = manifest.createRequest(
+                trackType, false, seekTimeUs);
         DataSpec dataSpec = new DataSpec(
                 //Uri.parse(sabrStream.getRequestUrl()),
-                Uri.parse(manifest.getRequestUrl(trackType)),
+                Uri.parse(request.url),
                 //segmentUri.resolveUri(baseUrl),
                 DataSpec.HTTP_METHOD_POST,
                 //sabrStream.createVideoPlaybackAbrRequest(trackType, false).toByteArray(),
-                manifest.createVideoPlaybackAbrRequest(trackType, false, seekTimeUs).toByteArray(),
+                request.body,
                 0, 0, C.LENGTH_UNSET,
                 //segmentUri.start,
                 //segmentUri.start,
@@ -621,7 +655,8 @@ public class DefaultSabrChunkSource implements SabrChunkSource {
                 0,
                 sabrHeaders);
         long sampleOffsetUs = -representation.presentationTimeOffsetUs;
-        Log.e(TAG, "Load media chunk: track=" + trackType + ", rn=" + manifest.getSabrRequestNumber()
+        Log.d(TAG, "Load media chunk: track=" + trackType + ", rn=" + request.requestNumber
+                + ", generation=" + request.generation
                 + ", startTimeMs=" + startTimeMs + ", backoffTimeMs=" + sabrStream.getBackoffTimeMs());
         return new ContainerMediaChunk(
                 dataSource,

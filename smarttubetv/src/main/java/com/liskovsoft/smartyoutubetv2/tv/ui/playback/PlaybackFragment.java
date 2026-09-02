@@ -835,6 +835,10 @@ public class PlaybackFragment extends SeekModePlaybackFragment implements Playba
     public void setVideo(Video video) {
         mExoPlayerController.setVideo(video);
 
+        if (mPlayerGlue != null) {
+            mPlayerGlue.setLiveActionVisible(video != null && video.isLive);
+        }
+
         if (mPlayerGlue != null && video != null) {
             // Preserve player formatting
             mPlayerGlue.setTitle(video.getTitleFull() != null ? video.getTitleFull() : "...");
@@ -941,6 +945,11 @@ public class PlaybackFragment extends SeekModePlaybackFragment implements Playba
     // End Ui events
 
     // Begin Engine Events
+
+    @Override
+    public void setRequestContext(MediaItemFormatInfo formatInfo) {
+        mExoPlayerController.setRequestContext(formatInfo);
+    }
 
     @Override
     public void openSabr(MediaItemFormatInfo formatInfo) {

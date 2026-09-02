@@ -27,20 +27,20 @@ import com.google.android.exoplayer2.source.TrackGroupArray;
 import com.google.android.exoplayer2.source.dash.manifest.DashManifest;
 import com.google.android.exoplayer2.source.sabr.manifest.SabrManifest;
 import com.google.android.exoplayer2.trackselection.TrackSelectionArray;
-import com.liskovsoft.sharedutils.cronet.CronetManager;
 import com.liskovsoft.sharedutils.helpers.AppInfoHelpers;
 import com.liskovsoft.sharedutils.helpers.DeviceHelpers;
 import com.liskovsoft.sharedutils.helpers.FileHelpers;
 import com.liskovsoft.sharedutils.helpers.Helpers;
 import com.liskovsoft.sharedutils.querystringparser.UrlQueryStringFactory;
 import com.liskovsoft.smartyoutubetv2.common.R;
+import com.liskovsoft.smartyoutubetv2.common.app.models.playback.live.LivePlaybackStatus;
 import com.liskovsoft.smartyoutubetv2.common.autoframerate.internal.DisplayHolder.Mode;
 import com.liskovsoft.smartyoutubetv2.common.autoframerate.internal.UhdHelper;
+import com.liskovsoft.smartyoutubetv2.common.exoplayer.ExoMediaSourceFactory;
 import com.liskovsoft.smartyoutubetv2.common.exoplayer.versions.ExoUtils;
 import com.liskovsoft.smartyoutubetv2.common.misc.MediaServiceManager;
 import com.liskovsoft.smartyoutubetv2.common.prefs.AppPrefs;
 import com.liskovsoft.smartyoutubetv2.common.prefs.PlayerData;
-import com.liskovsoft.smartyoutubetv2.common.prefs.PlayerTweaksData;
 import com.liskovsoft.smartyoutubetv2.common.utils.Utils;
 import com.liskovsoft.youtubeapi.app.models.AppInfo;
 import com.liskovsoft.youtubeapi.common.helpers.AppClient;
@@ -319,6 +319,15 @@ public final class DebugInfoManager implements Runnable, Player.EventListener {
         //appendRow("Playback state", state);
         float boost = mPlayerInitializer.getVolumeBoost();
         appendRow("Playback info", String.format("paused=%s;state=%s", !mPlayer.getPlayWhenReady(), state));
+        LivePlaybackStatus.Snapshot live = LivePlaybackStatus.snapshot();
+        if (live.redactedVideoId != null) {
+            appendRow("Live source", String.format("id=%s;state=%s;protocol=%s;generation=%s",
+                    live.redactedVideoId, live.state,
+                    live.source != null ? live.source : "NONE", live.generation));
+            if (live.fallbackReason != null) {
+                appendRow("Live fallback", live.fallbackReason);
+            }
+        }
         appendRow("Volume",
                 String.format("original=%s;normalized=%s", PlayerData.instance(mContext).getPlayerVolume(), Helpers.formatFloat(boost * mPlayer.getVolume())));
     }
@@ -370,10 +379,7 @@ public final class DebugInfoManager implements Runnable, Player.EventListener {
 
     private void appendVersion() {
         //appendRow("ExoPlayer version", ExoPlayerLibraryInfo.VERSION);
-        PlayerTweaksData playerTweaksData = PlayerTweaksData.instance(mContext);
-        String engine = playerTweaksData.getPlayerDataSource() == PlayerTweaksData.PLAYER_DATA_SOURCE_OKHTTP ? "OkHttp" :
-                playerTweaksData.getPlayerDataSource() == PlayerTweaksData.PLAYER_DATA_SOURCE_CRONET
-                        && CronetManager.getEngine(mContext) != null ? "Cronet" : "Default";
+        String engine = ExoMediaSourceFactory.getLastEffectiveEngine(mContext);
         String protocol;
         Object manifest = mPlayer.getCurrentManifest();
         if (manifest == null) {

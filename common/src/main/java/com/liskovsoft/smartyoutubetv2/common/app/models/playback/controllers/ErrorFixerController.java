@@ -32,6 +32,10 @@ public class ErrorFixerController extends BasePlayerController implements OnLong
 
     @Override
     public void onEngineError(int type, int rendererIndex, Throwable error) {
+        if (mVideoLoaderController != null && mVideoLoaderController.consumeLiveFallbackHandled()) {
+            Log.w(TAG, "Player error handled by bounded live source fallback");
+            return;
+        }
         Log.e(TAG, "Player error occurred: %s. Trying to fix…", type);
 
         runEngineErrorAction(type, rendererIndex, error);
@@ -45,6 +49,8 @@ public class ErrorFixerController extends BasePlayerController implements OnLong
 
         if (isStreamEnded()) {
             getMainController().onPlayEnd();
+        } else if (mVideoLoaderController != null && mVideoLoaderController.handleLiveNoProgress()) {
+            Log.w(TAG, "Live stall handled by bounded source fallback");
         } else if (isOfflineVideo() && isSubtitlesEnabled()) {
             // Long loading subtitles cause hangs
             disableSubtitles();

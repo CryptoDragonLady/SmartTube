@@ -105,4 +105,7 @@ public interface ChunkSource {
    * @return Whether the load should be canceled. Must be false if {@code cancelable} is false.
    */
   boolean onChunkLoadError(Chunk chunk, boolean cancelable, Exception e, long blacklistDurationMs);
+
+  /** Called after the final load-error action has been selected. */
+  default void onChunkLoadErrorResolved(Chunk chunk, boolean willRetry) {}
 }

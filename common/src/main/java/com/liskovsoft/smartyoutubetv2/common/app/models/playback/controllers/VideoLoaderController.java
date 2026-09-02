@@ -2,10 +2,17 @@ package com.liskovsoft.smartyoutubetv2.common.app.models.playback.controllers;
 
 import android.os.Build.VERSION;
 
+import com.google.android.exoplayer2.source.sabr.SabrLiveFeatureFlags;
+import com.google.android.exoplayer2.source.sabr.parser.exceptions.SabrMediaCorrelationException;
+import com.google.android.exoplayer2.source.sabr.parser.ump.UMPProtocolException;
+import com.google.android.exoplayer2.source.sabr.session.SabrSessionException;
+import com.google.android.exoplayer2.upstream.HttpDataSource;
 import com.liskovsoft.mediaserviceinterfaces.MediaItemService;
 import com.liskovsoft.mediaserviceinterfaces.ServiceManager;
 import com.liskovsoft.mediaserviceinterfaces.data.MediaFormat;
 import com.liskovsoft.mediaserviceinterfaces.data.MediaItemFormatInfo;
+import com.liskovsoft.mediaserviceinterfaces.data.PlaybackDebugMode;
+import com.liskovsoft.mediaserviceinterfaces.data.PlaybackRequestContext;
 import com.liskovsoft.mediaserviceinterfaces.data.MediaItemMetadata;
 import com.liskovsoft.sharedutils.helpers.Helpers;
 import com.liskovsoft.sharedutils.helpers.MessageHelpers;
@@ -17,6 +24,11 @@ import com.liskovsoft.smartyoutubetv2.common.app.models.data.SimpleMediaItem;
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.Video;
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.VideoGroup;
 import com.liskovsoft.smartyoutubetv2.common.app.models.playback.BasePlayerController;
+import com.liskovsoft.smartyoutubetv2.common.app.models.playback.live.LivePlaybackDescriptor;
+import com.liskovsoft.smartyoutubetv2.common.app.models.playback.live.LivePlayerResponseRetryPolicy;
+import com.liskovsoft.smartyoutubetv2.common.app.models.playback.live.LivePlaybackSession;
+import com.liskovsoft.smartyoutubetv2.common.app.models.playback.live.LivePlaybackSourceSelector;
+import com.liskovsoft.smartyoutubetv2.common.app.models.playback.live.LivePlaybackStatus;
 import com.liskovsoft.smartyoutubetv2.common.app.models.playback.manager.PlayerConstants;
 import com.liskovsoft.smartyoutubetv2.common.app.presenters.AppDialogPresenter;
 import com.liskovsoft.smartyoutubetv2.common.app.presenters.dialogs.VideoActionPresenter;
@@ -31,12 +43,20 @@ import io.reactivex.disposables.Disposable;
 public class VideoLoaderController extends BasePlayerController {
     private static final String TAG = VideoLoaderController.class.getSimpleName();
     private static final int MIN_SHUFFLE_SIZE = 30;
+    private static final int MAX_LIVE_PLAYER_RESPONSES = 3;
     private final Playlist mPlaylist;
     private Video mPendingVideo;
     private SuggestionsController mSuggestionsController;
     private ErrorFixerController mErrorFixerController;
     private long mSleepTimerStartMs;
     private Disposable mFormatInfoAction;
+    private final LivePlaybackSession mLivePlaybackSession =
+            new LivePlaybackSession(new LivePlaybackSourceSelector());
+    private final LivePlayerResponseRetryPolicy mLivePlayerResponseRetryPolicy =
+            new LivePlayerResponseRetryPolicy(MAX_LIVE_PLAYER_RESPONSES);
+    private MediaItemFormatInfo mLiveFormatInfo;
+    private boolean mLiveFallbackHandled;
+    private boolean mLiveTerminalFailure;
     private final Runnable mReloadVideo = () -> {
         getMainController().onNewVideo(getVideo());
     };
@@ -79,6 +99,10 @@ public class VideoLoaderController extends BasePlayerController {
             return;
         }
 
+        mLiveTerminalFailure = false;
+        mLivePlayerResponseRetryPolicy.reset();
+        stopLivePlaybackSession();
+
         item.isShuffled = false;
 
         if (!item.fromQueue && !item.belongsToPlaybackQueue()) {
@@ -110,6 +134,123 @@ public class VideoLoaderController extends BasePlayerController {
     @Override
     public void onEngineReleased() {
         disposeActions();
+        mLivePlayerResponseRetryPolicy.reset();
+        stopLivePlaybackSession();
+    }
+
+    @Override
+    public void onEngineError(int type, int rendererIndex, Throwable error) {
+        mLiveFallbackHandled = false;
+        if (mLiveFormatInfo == null || getPlayer() == null
+                || mLivePlaybackSession.getCurrentSource() == null) {
+            return;
+        }
+        boolean sourceFailure = type == com.liskovsoft.smartyoutubetv2.common.app.models.playback.listener.PlayerEventListener.ERROR_TYPE_SOURCE;
+        if (sourceFailure && findHttpResponseCode(error) == 403) {
+            mLiveFallbackHandled = handleForbiddenLiveGeneration();
+            return;
+        }
+        LivePlaybackSession.Failure failure = classifyLiveFailure(error);
+        if (!sourceFailure && failure == LivePlaybackSession.Failure.UNKNOWN) {
+            return;
+        }
+        mLiveFallbackHandled = advanceLiveFallback(failure);
+    }
+
+    /** Routes live stalls through the same bounded source budget as explicit engine failures. */
+    public boolean handleLiveNoProgress() {
+        if (mLiveTerminalFailure) {
+            return true;
+        }
+        return advanceLiveFallback(LivePlaybackSession.Failure.NO_PROGRESS);
+    }
+
+    private boolean advanceLiveFallback(LivePlaybackSession.Failure failure) {
+        if (mLiveFormatInfo == null || getPlayer() == null
+                || mLivePlaybackSession.getCurrentSource() == null) {
+            return false;
+        }
+        LivePlaybackSourceSelector.Decision fallback = mLivePlaybackSession.fail(failure);
+        LivePlaybackStatus.update(mLiveFormatInfo.getVideoId(), mLivePlaybackSession);
+        if (!fallback.isAvailable()) {
+            mLiveTerminalFailure = true;
+            getPlayer().showProgressBar(false);
+            getPlayer().setTitle(fallback.reason);
+            getPlayer().showOverlay(true);
+            return true;
+        }
+        Log.e(TAG, "Live source fallback: %s -> %s", failure, fallback.source);
+        getPlayer().showProgressBar(true);
+        openLiveSource(fallback);
+        return true;
+    }
+
+    /** Retires every URL from a forbidden player response and requests the next client once. */
+    private boolean handleForbiddenLiveGeneration() {
+        PlaybackRequestContext context = mLiveFormatInfo != null ?
+                mLiveFormatInfo.getPlaybackRequestContext() : null;
+        long playerGeneration = context != null ? context.getGenerationId() : -1;
+        if (!mLivePlayerResponseRetryPolicy.tryRetireForbiddenGeneration(playerGeneration)) {
+            mLiveTerminalFailure = true;
+            getPlayer().showProgressBar(false);
+            getPlayer().setTitle("No untried live player response is available after HTTP 403");
+            getPlayer().showOverlay(true);
+            Log.e(TAG, "Live player-response budget exhausted after HTTP 403; responses=%s",
+                    mLivePlayerResponseRetryPolicy.getPlayerResponseCount());
+            return true;
+        }
+
+        Log.e(TAG, "Retiring forbidden live player response; generation=%s, response=%s/%s",
+                playerGeneration, mLivePlayerResponseRetryPolicy.getPlayerResponseCount(),
+                MAX_LIVE_PLAYER_RESPONSES);
+        mLivePlaybackSession.stop();
+        LivePlaybackStatus.clear();
+        mLiveFormatInfo = null;
+        mLiveTerminalFailure = false;
+        getPlayer().showProgressBar(true);
+        YouTubeServiceManager.instance().switchNextClientNow();
+        loadFormatInfo(getVideo());
+        return true;
+    }
+
+    public boolean consumeLiveFallbackHandled() {
+        // ExoPlayer may report more than one callback for the same terminal source error. Keep
+        // those callbacks inside the exhausted live session instead of handing the duplicate to
+        // the legacy generic fixer, which would reload the video and restart the source budget.
+        boolean handled = mLiveFallbackHandled ||
+                mLiveTerminalFailure ||
+                (mLiveFormatInfo != null && mLivePlaybackSession.isTerminal());
+        mLiveFallbackHandled = false;
+        return handled;
+    }
+
+    @Override
+    public void onBuffering() {
+        updateLivePlaybackState(LivePlaybackSession.State.BUFFERING);
+    }
+
+    @Override
+    public void onPlay() {
+        updateLivePlaybackState(isPlayingBehindLiveEdge()
+                ? LivePlaybackSession.State.PLAYING_DVR
+                : LivePlaybackSession.State.PLAYING_LIVE_EDGE);
+    }
+
+    @Override
+    public void onPause() {
+        updateLivePlaybackState(LivePlaybackSession.State.PAUSED);
+    }
+
+    @Override
+    public void onSeekEnd() {
+        onPlay();
+    }
+
+    @Override
+    public void onSeekPositionChanged(long positionMs) {
+        if (mLiveFormatInfo != null && mLiveFormatInfo.isStreamSeekable()) {
+            updateLivePlaybackState(LivePlaybackSession.State.PLAYING_DVR);
+        }
     }
 
     @Override
@@ -306,6 +447,8 @@ public class VideoLoaderController extends BasePlayerController {
 
         getVideo().sync(formatInfo);
 
+        player.setRequestContext(formatInfo);
+
         // Fix stretched video for a couple milliseconds (before the onVideoSizeChanged gets called)
         applyAspectRatio(formatInfo);
 
@@ -333,6 +476,8 @@ public class VideoLoaderController extends BasePlayerController {
             //} else { // 18+ video or the video is hidden/removed
             //    scheduleNextVideoTimer(5_000);
             //}
+        } else if (formatInfo.isLive() || formatInfo.isLiveContent()) {
+            processLiveFormatInfo(formatInfo);
         } else if (acceptAdaptiveFormats(formatInfo) && formatInfo.containsDashFormats()) {
             Log.d(TAG, "Loading regular video in dash format...");
 
@@ -364,6 +509,139 @@ public class VideoLoaderController extends BasePlayerController {
         }
 
         player.showBackground(bgImageUrl); // remove bg (if video playing) or set another bg
+    }
+
+    private void processLiveFormatInfo(MediaItemFormatInfo formatInfo) {
+        PlaybackRequestContext context = formatInfo.getPlaybackRequestContext();
+        mLivePlayerResponseRetryPolicy.onPlayerResponse(
+                context != null ? context.getGenerationId() : -1);
+        mLiveFormatInfo = formatInfo;
+        boolean forceVisionOsHls = PlaybackDebugMode.get() ==
+                PlaybackDebugMode.Mode.FORCE_VISIONOS_HLS_REFERENCE;
+        boolean debugHarnessEnabled = SabrLiveFeatureFlags.enableSabrLiveHarness();
+        boolean sabrEnabled = SabrLiveFeatureFlags.enableSabrLiveProduction()
+                || debugHarnessEnabled;
+        // The debug route is a one-shot opt-in for this resolved playback, not global app state.
+        if (debugHarnessEnabled) {
+            SabrLiveFeatureFlags.setSabrLiveHarnessEnabledForDebug(false);
+        }
+        LivePlaybackSourceSelector.Configuration configuration =
+                new LivePlaybackSourceSelector.Configuration(
+                        sabrEnabled,
+                        acceptAdaptiveFormats(formatInfo),
+                        acceptDashLive(formatInfo),
+                        formatInfo.containsHlsUrl(),
+                        forceVisionOsHls ? LivePlaybackSourceSelector.Mode.FORCE_HLS :
+                                LivePlaybackSourceSelector.Mode.AUTO);
+        if (forceVisionOsHls) {
+            PlaybackDebugMode.clear();
+        }
+        LivePlaybackSourceSelector.Decision decision = mLivePlaybackSession.start(
+                LivePlaybackDescriptor.from(formatInfo), configuration);
+        LivePlaybackStatus.update(formatInfo.getVideoId(), mLivePlaybackSession);
+        if (decision.isAvailable()) {
+            openLiveSource(decision);
+            return;
+        }
+        PlaybackView player = getPlayer();
+        if (player != null && formatInfo.containsUrlFormats()) {
+            stopLivePlaybackSession();
+            mLiveTerminalFailure = false;
+            Log.d(TAG, "Loading live URL list fallback. This is always LQ...");
+            player.openUrlList(formatInfo.createUrlList());
+            return;
+        }
+        if (player != null) {
+            mLiveTerminalFailure = true;
+            player.setTitle(formatInfo.getPlayabilityReason() != null
+                    ? formatInfo.getPlayabilityReason() : decision.reason);
+            player.showProgressBar(false);
+            player.showOverlay(true);
+        }
+    }
+
+    private boolean isPlayingBehindLiveEdge() {
+        PlaybackView player = getPlayer();
+        return player != null && mLiveFormatInfo != null && mLiveFormatInfo.isStreamSeekable()
+                && player.getDurationMs() > 0
+                && player.getDurationMs() - player.getPositionMs() > 30_000;
+    }
+
+    private void updateLivePlaybackState(LivePlaybackSession.State state) {
+        if (mLiveFormatInfo == null) return;
+        mLivePlaybackSession.updatePlaybackState(state);
+        LivePlaybackStatus.update(mLiveFormatInfo.getVideoId(), mLivePlaybackSession);
+    }
+
+    private void openLiveSource(LivePlaybackSourceSelector.Decision decision) {
+        PlaybackView player = getPlayer();
+        if (player == null || mLiveFormatInfo == null) return;
+        Log.d(TAG, "Loading live video with %s (%s)", decision.source, decision.reason);
+        switch (decision.source) {
+            case SABR:
+                player.openSabr(mLiveFormatInfo);
+                break;
+            case DASH_FORMATS:
+                player.openDash(mLiveFormatInfo);
+                break;
+            case DASH_MANIFEST:
+                player.openDashUrl(mLiveFormatInfo.getDashManifestUrl());
+                break;
+            case HLS:
+                player.openHlsUrl(mLiveFormatInfo.getHlsManifestUrl());
+                break;
+        }
+    }
+
+    private LivePlaybackSession.Failure classifyLiveFailure(Throwable error) {
+        for (Throwable cause = error; cause != null; cause = cause.getCause()) {
+            if (cause instanceof UMPProtocolException
+                    || cause instanceof SabrMediaCorrelationException) {
+                return LivePlaybackSession.Failure.PROTOCOL;
+            }
+            if (cause instanceof SabrSessionException) {
+                switch (((SabrSessionException) cause).getCategory()) {
+                    case PROTECTION: return LivePlaybackSession.Failure.TOKEN;
+                    case RELOAD_REQUIRED:
+                    case RELOAD_FAILED:
+                    case REBOOTSTRAP_REQUIRED: return LivePlaybackSession.Failure.RELOAD;
+                    case UNAVAILABLE:
+                    case UNSUPPORTED_FORMAT: return LivePlaybackSession.Failure.CAPABILITY;
+                    case PROTOCOL:
+                    case MEDIA_CORRELATION: return LivePlaybackSession.Failure.PROTOCOL;
+                    case CANCELLED:
+                    case STALE_GENERATION: return LivePlaybackSession.Failure.CANCELLED;
+                    default: return LivePlaybackSession.Failure.INITIALIZATION;
+                }
+            }
+        }
+        LivePlaybackSourceSelector.Source source = mLivePlaybackSession.getCurrentSource();
+        if (source == LivePlaybackSourceSelector.Source.DASH_FORMATS
+                || source == LivePlaybackSourceSelector.Source.DASH_MANIFEST) {
+            return LivePlaybackSession.Failure.DASH;
+        }
+        if (source == LivePlaybackSourceSelector.Source.HLS) {
+            return LivePlaybackSession.Failure.HLS;
+        }
+        return LivePlaybackSession.Failure.UNKNOWN;
+    }
+
+    private static int findHttpResponseCode(Throwable error) {
+        for (Throwable cause = error; cause != null; cause = cause.getCause()) {
+            if (cause instanceof HttpDataSource.InvalidResponseCodeException) {
+                return ((HttpDataSource.InvalidResponseCodeException) cause).responseCode;
+            }
+        }
+        return -1;
+    }
+
+    private void stopLivePlaybackSession() {
+        if (mLiveFormatInfo != null || mLivePlaybackSession.getCurrentSource() != null) {
+            mLivePlaybackSession.stop();
+            LivePlaybackStatus.clear();
+        }
+        mLiveFormatInfo = null;
+        mLiveFallbackHandled = false;
     }
 
     private void reloadVideo(int delayMs) {
